@@ -1,0 +1,2746 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terminkalender – Psychotherapie (v1.4.3)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+:root{
+  --bg:#f5f4f0;--surface:#ffffff;--surface2:#efefeb;--border:#e0dfd8;--border2:#c8c7be;
+  --text:#1a1a18;--text2:#6b6b66;--text3:#9a9a94;
+  --blue:#185FA5;--blue-bg:#e6f1fb;--blue-text:#0C447C;
+  --teal:#0F6E56;--teal-bg:#e1f5ee;--teal-text:#085041;
+  --amber:#BA7517;--amber-bg:#faeeda;--amber-text:#633806;
+  --red:#A32D2D;--red-bg:#fcebeb;--red-text:#791F1F;
+  --purple:#534AB7;--purple-bg:#eeedfe;--purple-text:#3C3489;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1a18;--surface:#252522;--surface2:#2e2e2b;--border:#3a3a36;--border2:#4a4a46;
+    --text:#f0efe8;--text2:#a0a09a;--text3:#6b6b66;
+    --blue-bg:#0c2a4a;--blue-text:#85B7EB;
+    --teal-bg:#052f24;--teal-text:#5DCAA5;
+    --amber-bg:#2e1f06;--amber-text:#EF9F27;
+    --red-bg:#2a0f0f;--red-text:#F09595;
+    --purple-bg:#1e1b40;--purple-text:#AFA9EC;
+  }
+  /* Termin-Pills & Badges im Dunkelmodus an die dunkle Palette anpassen,
+     damit sie nicht hell "leuchten" und genug Kontrast haben. */
+  .appt-dot.et{background:var(--blue-bg);color:var(--blue-text)}
+  .appt-dot.vt{background:var(--purple-bg);color:var(--purple-text)}
+  .appt-dot.gt{background:var(--teal-bg);color:var(--teal-text)}
+  .appt-dot.konsult{background:var(--amber-bg);color:var(--amber-text)}
+  .appt-dot.amber{background:var(--amber-bg);color:var(--amber-text)}
+  .appt-dot.pink{background:#3b1020;color:#f3a9c9}
+  .appt-dot.phone{background:var(--teal-bg);color:var(--teal-text)}
+  .appt-dot.noshow{background:var(--red-bg);color:var(--red-text)}
+  .badge-wl-new{background:var(--surface2);color:var(--text2)}
+  .badge-wl-contacted{background:var(--blue-bg);color:var(--blue-text)}
+  .badge-wl-no_reply{background:var(--amber-bg);color:var(--amber-text)}
+  .badge-wl-scheduled{background:var(--teal-bg);color:var(--teal-text)}
+  .badge-wl-declined{background:var(--red-bg);color:var(--red-text)}
+  .badge-prio-high{background:#3b1020;color:#f3a9c9}
+  .badge-prio-low{background:var(--surface2);color:var(--text2)}
+}
+
+.app{max-width:960px;margin:0 auto;padding:1.5rem 1rem}
+h1{font-size:20px;font-weight:600;color:var(--text)}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--purple);display:inline-block;margin-right:4px}
+.tab-bar{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius);padding:3px;border:1px solid var(--border)}
+.tab{padding:6px 16px;font-size:13px;border:none;background:transparent;border-radius:6px;cursor:pointer;color:var(--text2);font-family:inherit;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--surface);color:var(--text);font-weight:500;border:1px solid var(--border)}
+.btn{padding:7px 14px;font-size:13px;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);cursor:pointer;color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn-primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-primary:hover{opacity:.88}
+.btn-danger{background:var(--red-bg);color:var(--red-text);border-color:var(--red-text)}
+
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.25rem}
+.metric{background:var(--surface2);border-radius:var(--radius);padding:12px 14px}
+.metric-label{font-size:11px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.metric-val{font-size:22px;font-weight:600;color:var(--text);line-height:1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:3px}
+
+.panel{display:none}.panel.active{display:block}
+
+/* Calendar */
+.cal-nav{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+.cal-title{font-size:15px;font-weight:500;color:var(--text);flex:1;text-align:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-hdr{text-align:center;font-size:11px;color:var(--text3);padding:4px 0;font-weight:500;text-transform:uppercase;letter-spacing:.3px}
+.cal-day{min-height:72px;border-radius:var(--radius);border:1px solid var(--border);padding:5px;cursor:pointer;background:var(--surface);transition:border-color .12s;position:relative;box-sizing:border-box;overflow:visible}
+.cal-day:hover{border-color:var(--border2);z-index:10}
+.cal-day.other-month{opacity:.35;cursor:default;pointer-events:none}
+.cal-day.today{border-color:var(--purple);border-width:2px;cursor:pointer}
+.cal-day-num{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:2px;pointer-events:none}
+.cal-day.today .cal-day-num{color:var(--purple);font-weight:700}
+.appt-dot{font-size:10px;padding:1px 4px;border-radius:3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.appt-dot.et{background:#dbeafe;color:#1e40af}          /* Blau — Einzeltherapie */
+.appt-dot.vt{background:#ede9fe;color:#5b21b6}          /* Lila — TSS */
+.appt-dot.gt{background:#d1fae5;color:#065f46}          /* Grün — Gruppentherapie */
+.appt-dot.konsult{background:#fef3c7;color:#92400e}     /* Gelb — Probatorik */
+.appt-dot.amber{background:#ffedd5;color:#9a3412}       /* Orange — Selbstzahler */
+.appt-dot.pink{background:#fce7f3;color:#9d174d}        /* Pink — Privat */
+.appt-dot.phone{background:#ccfbf1;color:#0f766e}       /* Türkis — Telefontermin */
+.appt-dot.canceled{background:var(--red-bg);color:var(--red-text);text-decoration:line-through}
+.appt-dot.noshow{background:#fef2f2;color:#991b1b;font-style:italic}
+/* Slot summary tooltip */
+.cal-tip{position:absolute;z-index:50;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 11px;font-size:12px;color:var(--text2);pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.1);white-space:nowrap;top:calc(100% + 4px);left:0;display:none;min-width:160px}
+.cal-tip-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.cal-tip-row:last-child{margin-bottom:0}
+.cal-tip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+.search-bar{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;background:var(--surface);color:var(--text);font-family:inherit;outline:none;transition:border-color .15s}
+.search-bar:focus{border-color:var(--purple)}
+.patient-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:6px;cursor:pointer;background:var(--surface);transition:all .12s}
+.patient-row:hover{border-color:var(--border2);background:var(--surface2)}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.av-blue{background:var(--blue-bg);color:var(--blue-text)}
+.av-teal{background:var(--teal-bg);color:var(--teal-text)}
+.av-amber{background:var(--amber-bg);color:var(--amber-text)}
+.av-purple{background:var(--purple-bg);color:var(--purple-text)}
+.av-gray{background:var(--surface2);color:var(--text2)}
+.patient-info{flex:1;min-width:0}
+.patient-name{font-size:14px;font-weight:500;color:var(--text)}
+.patient-meta{font-size:12px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.patient-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.pstat{text-align:right}
+.pstat-val{font-size:14px;font-weight:600;color:var(--text)}
+.pstat-lbl{font-size:10px;color:var(--text3)}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-active{background:var(--teal-bg);color:var(--teal-text)}
+.badge-pause{background:var(--amber-bg);color:var(--amber-text)}
+.badge-done{background:var(--surface2);color:var(--text2)}
+.badge-wl-new{background:#f1f5f9;color:#475569}
+.badge-wl-contacted{background:#dbeafe;color:#1e40af}
+.badge-wl-no_reply{background:#fef3c7;color:#92400e}
+.badge-wl-scheduled{background:#d1fae5;color:#065f46}
+.badge-wl-declined{background:#fee2e2;color:#991b1b}
+.badge-prio-high{background:#fce7f3;color:#9d174d;font-size:10px;padding:1px 6px;border-radius:3px}
+.badge-prio-low{background:#f1f5f9;color:#64748b;font-size:10px;padding:1px 6px;border-radius:3px}
+
+.back-btn{background:none;border:none;cursor:pointer;color:var(--purple);font-size:13px;padding:0 0 1rem;font-family:inherit;display:flex;align-items:center;gap:4px}
+.detail-card{border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;background:var(--surface);margin-bottom:1rem}
+.detail-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.drow{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)}
+.drow:last-child{border-bottom:none}
+.drow-lbl{color:var(--text2)}
+.drow-val{color:var(--text);font-weight:500;text-align:right;max-width:60%}
+.section-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px}
+.srow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.srow:last-child{border-bottom:none}
+.srow-date{color:var(--text2);width:88px;flex-shrink:0}
+.srow-type{flex:1;color:var(--text)}
+.srow-dur{color:var(--text2);width:50px;text-align:right;flex-shrink:0}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:1.25rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem}
+.stat-card-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.bar-lbl{font-size:12px;color:var(--text2);width:95px;flex-shrink:0;text-align:right}
+.bar-track{flex:1;height:18px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+.bar-num{font-size:12px;color:var(--text2);width:28px;text-align:right}
+.week-row{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.wday{background:var(--surface2);border-radius:var(--radius);padding:8px 6px;text-align:center}
+.wday-name{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px}
+.wday-num{font-size:18px;font-weight:600;color:var(--text);line-height:1.2}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;border:1px solid var(--border)}
+.modal h2{font-size:16px;font-weight:600;margin-bottom:1rem;color:var(--text)}
+.form-row{margin-bottom:10px}
+.form-row label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;font-weight:500}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;background:var(--surface);color:var(--text);font-family:inherit;outline:none;transition:border-color .15s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--purple)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.2rem}
+.hidden{display:none!important}
+
+/* ICD search */
+.icd-wrap{position:relative}
+.icd-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);max-height:220px;overflow-y:auto;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.icd-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:baseline}
+.icd-item:last-child{border-bottom:none}
+.icd-item:hover{background:var(--surface2)}
+.icd-code{font-weight:600;color:var(--purple);flex-shrink:0;font-size:12px;width:44px}
+.icd-name{color:var(--text);line-height:1.3}
+.icd-selected{display:inline-flex;align-items:center;gap:6px;background:var(--purple-bg);color:var(--purple-text);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:500;margin-top:6px}
+.icd-selected button{background:none;border:none;cursor:pointer;color:var(--purple-text);font-size:14px;line-height:1;padding:0}
+
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--text3);font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="logo-dot"></span>
+      <h1>Psychotherapie — Terminkalender</h1>
+      <span style="font-size:11px;color:var(--text3);font-weight:500;margin-left:6px">v1.4.3</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="tab-bar">
+        <button class="tab" onclick="switchTab('kalender')">Kalender</button>
+        <button class="tab active" onclick="switchTab('heute')">Heute</button>
+        <button class="tab" onclick="switchTab('patienten')">Patienten</button>
+        <button class="tab" onclick="switchTab('warteliste')">Warteliste</button>
+        <button class="tab" onclick="switchTab('statistik')">Statistik</button>
+      </div>
+      <button class="btn" onclick="exportData()" title="Daten als Backup-Datei speichern">💾 Export</button>
+      <button class="btn" onclick="document.getElementById('import-file').click()" title="Backup wiederherstellen">📂 Import</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+      <button class="btn btn-primary" onclick="openNewAppt()">+ Termin</button>
+    </div>
+  </div>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="panel" id="panel-kalender">
+    <div class="cal-nav">
+      <button class="btn" onclick="changeMonth(-1)">&#8249;</button>
+      <div class="cal-title" id="cal-title"></div>
+      <button class="btn" onclick="changeMonth(1)">&#8250;</button>
+      <button class="btn" onclick="goToToday()" style="margin-left:4px">Heute</button>
+    </div>
+    <div class="cal-grid" id="cal-headers"></div>
+    <div class="cal-grid" id="cal-body" style="margin-top:3px"></div>
+  </div>
+
+  <div class="panel active" id="panel-heute">
+    <div id="heute-content"></div>
+  </div>
+
+  <div class="panel" id="panel-patienten">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input class="search-bar" style="margin:0;flex:1" placeholder="Patient suchen nach Name, ICD-Code oder Diagnose…" oninput="filterPatients(this.value)" id="psearch">
+      <select id="patient-sort" onchange="savePatientSort(this.value);renderPatients(document.getElementById('psearch').value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);cursor:pointer">
+        <option value="nachname">Nachname A–Z</option>
+        <option value="termin">Nächster Termin</option>
+        <option value="status">Status</option>
+      </select>
+      <button class="btn" onclick="switchSubTab('patienten-liste')" id="subtab-liste" style="font-weight:500">Patienten</button>
+      <button class="btn" onclick="switchSubTab('patienten-gruppen')" id="subtab-gruppen">Gruppen</button>
+      <button class="btn" onclick="switchSubTab('patienten-archiv')" id="subtab-archiv">Archiv</button>
+      <button class="btn btn-primary" id="btn-new-patient" onclick="openNewPatient()">+ Patient</button>
+    </div>
+    <div id="patienten-liste-content"><div id="patient-list"></div></div>
+    <div id="patienten-gruppen-content" style="display:none"><div id="group-list"></div></div>
+    <div id="patienten-archiv-content" style="display:none"><div id="archiv-list"></div></div>
+  </div>
+
+  <div class="panel" id="panel-detail">
+    <button class="back-btn" id="detail-back-btn" onclick="detailBack()">&#8592; Zurück</button>
+    <div id="detail-content"></div>
+  </div>
+
+  <div class="panel" id="panel-day">
+    <button class="back-btn" onclick="backToKal()">&#8592; Zurück zum Kalender</button>
+    <div id="day-content"></div>
+  </div>
+
+  <div class="panel" id="panel-statistik">
+    <div id="stats-content"></div>
+  </div>
+
+  <div class="panel" id="panel-warteliste">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <input class="search-bar" style="margin:0;flex:1;min-width:180px" placeholder="Suchen nach Name, Telefon…" oninput="filterWaitlist(this.value)" id="wl-search">
+      <select id="wl-filter-status" onchange="filterWaitlist(document.getElementById('wl-search').value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;background:var(--surface);color:var(--text);font-family:inherit;outline:none">
+        <option value="">Alle Status</option>
+        <option value="new">Noch nicht kontaktiert</option>
+        <option value="contacted">Kontaktiert</option>
+        <option value="no_reply">Keine Antwort</option>
+        <option value="scheduled">Termin vereinbart</option>
+        <option value="declined">Abgesagt/Abgebrochen</option>
+      </select>
+      <select id="wl-sort" onchange="saveWLSort(this.value);renderWaitlist(document.getElementById('wl-search').value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;background:var(--surface);color:var(--text);font-family:inherit;outline:none">
+        <option value="prio_wartezeit">Priorität + Wartezeit</option>
+        <option value="wartezeit">Wartezeit (längste zuerst)</option>
+        <option value="name">Name A–Z</option>
+        <option value="letzter_kontakt">Letzter Kontakt</option>
+        <option value="status">Status</option>
+      </select>
+      <button class="btn btn-primary" onclick="openNewWaitlistEntry()">+ Eintrag</button>
+    </div>
+    <div id="wl-summary" style="margin-bottom:10px"></div>
+    <div id="waitlist-entries"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal: Termin -->
+<div class="overlay hidden" id="modal-appt">
+  <div class="modal">
+    <h2 id="modal-appt-title">Neuer Termin</h2>
+    <div class="form-row" id="appt-patient-row"><label>Patient</label>
+      <select id="appt-patient" onchange="checkProbatorik(this.value);if(document.getElementById('appt-type').value!=='telefon'&&document.getElementById('appt-type').value!=='gt')onApptTypeChange()"></select>
+    </div>
+    <div class="form-row hidden" id="appt-group-row"><label>Gruppe</label>
+      <select id="appt-group"><option value="">– Gruppe wählen –</option></select>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Für alle Mitglieder der Gruppe wird ein Termin angelegt.</div>
+    </div>
+    <div class="form-row"><label>Datum</label><input type="date" id="appt-date" onchange="onApptTypeChange()"></div>
+    <div class="form-row"><label>Sitzungsart</label>
+      <select id="appt-type" onchange="onApptTypeChange()">
+        <option value="probatorik">Probatorik</option>
+        <option value="et">Einzeltherapie</option>
+        <option value="gt">Gruppentherapie</option>
+        <option value="tss">TSS (Terminservicestelle)</option>
+        <option value="selbst">Selbstzahler</option>
+        <option value="privat">Privat</option>
+        <option value="telefon">Telefontermin</option>
+      </select>
+    </div>
+    <div class="form-row" id="slot-row"><label>Zeitslot</label>
+      <div id="slot-buttons" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px"></div>
+      <input type="hidden" id="appt-time">
+      <input type="hidden" id="appt-dur">
+    </div>
+    <div class="form-row hidden" id="phone-time-row">
+      <label>Uhrzeit</label>
+      <input type="time" id="appt-phone-time" value="08:00" style="max-width:140px" oninput="document.getElementById('appt-time').value=this.value;document.getElementById('appt-dur').value=30">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Dauer: 30 min · kein fester Slot</div>
+    </div>
+    <div class="form-row"><label>Notiz (optional)</label><textarea id="appt-note" rows="2" style="resize:vertical"></textarea></div>
+    <input type="hidden" id="appt-edit-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-appt')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveAppt()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Warteliste -->
+<div class="overlay hidden" id="modal-wl">
+  <div class="modal">
+    <h2 id="modal-wl-title">Neuer Wartelisten-Eintrag</h2>
+    <div class="form-row"><label>Name</label><input type="text" id="wl-name" placeholder="Vor- und Nachname" autocomplete="off"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Telefon</label><input type="tel" id="wl-phone"></div>
+      <div class="form-row"><label>E-Mail (optional)</label><input type="email" id="wl-email"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Aufgenommen am</label><input type="date" id="wl-date"></div>
+      <div class="form-row"><label>Priorität</label>
+        <select id="wl-priority">
+          <option value="normal">Normal</option>
+          <option value="high">Hoch</option>
+          <option value="low">Niedrig</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Status</label>
+      <select id="wl-status">
+        <option value="new">Noch nicht kontaktiert</option>
+        <option value="contacted">Kontaktiert</option>
+        <option value="no_reply">Kontaktiert — keine Antwort erhalten</option>
+        <option value="scheduled">Termin vereinbart</option>
+        <option value="declined">Abgesagt / Abgebrochen</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Letzter Kontakt (optional)</label><input type="date" id="wl-last-contact"></div>
+      <div class="form-row"><label>Kontaktweg (Erstkontakt)</label>
+        <select id="wl-contact-method">
+          <option value="">– keine Angabe –</option>
+          <option value="phone">Telefon</option>
+          <option value="email">E-Mail</option>
+          <option value="inperson">Persönlich</option>
+          <option value="other">Sonstige</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Beschwerden / Anliegen (optional)</label><textarea id="wl-complaint" rows="2" style="resize:vertical" placeholder="z.B. Depressive Episode, auf Empfehlung von…"></textarea></div>
+    <div class="form-row"><label>Notizen</label><textarea id="wl-notes" rows="2" style="resize:vertical"></textarea></div>
+    <input type="hidden" id="wl-edit-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-wl')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveWaitlistEntry()">Speichern</button>
+    </div>
+  </div>
+</div>
+<div class="overlay hidden" id="modal-group">
+  <div class="modal">
+    <h2 id="modal-group-title">Neue Gruppe</h2>
+    <div class="form-row"><label>Gruppenname</label><input type="text" id="grp-name" placeholder="z.B. Angstgruppe Montag" autocomplete="off"></div>
+    <div class="form-row"><label>Beschreibung (optional)</label><input type="text" id="grp-desc" placeholder="z.B. Soziale Phobie, wöchentlich"></div>
+    <div class="form-row">
+      <label>Mitglieder</label>
+      <div id="grp-member-list" style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);padding:8px"></div>
+    </div>
+    <input type="hidden" id="grp-edit-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-group')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveGroup()">Speichern</button>
+    </div>
+  </div>
+</div>
+<div class="overlay hidden" id="modal-patient">
+  <div class="modal">
+    <h2 id="modal-patient-title">Neuer Patient</h2>
+    <div class="form-row"><label>Nachname, Vorname</label><input type="text" id="pt-name" placeholder="z.B. Müller, Anna" autocomplete="off"></div>
+    <div class="form-row"><label>Geburtsdatum</label><input type="date" id="pt-dob"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Telefon (optional)</label><input type="tel" id="pt-phone"></div>
+      <div class="form-row"><label>E-Mail (optional)</label><input type="email" id="pt-email"></div>
+    </div>
+
+    <div class="form-row">
+      <label>Diagnose (ICD-10)</label>
+      <div class="icd-wrap">
+        <input type="text" id="icd-search" placeholder="Code oder Begriff suchen, z.B. F32 oder Depression…" autocomplete="off" oninput="searchICD(this.value)" onfocus="searchICD(this.value)">
+        <div class="icd-dropdown hidden" id="icd-dropdown"></div>
+      </div>
+      <div id="icd-selected-list" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px"></div>
+      <input type="hidden" id="pt-diag-codes">
+    </div>
+
+    <div class="form-row"><label>Sitzungsart (Schwerpunkt)</label>
+      <select id="pt-type">
+        <option value="probatorik">Probatorik</option>
+        <option value="et">Einzeltherapie</option>
+        <option value="gt">Gruppentherapie</option>
+        <option value="tss">TSS (Terminservicestelle)</option>
+        <option value="selbst">Selbstzahler</option>
+        <option value="privat">Privat</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Status</label>
+      <select id="pt-status">
+        <option value="active">Aktiv</option>
+        <option value="pause">Pause</option>
+        <option value="done">Abgeschlossen</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Notizen (optional)</label><textarea id="pt-notes" rows="2" style="resize:vertical"></textarea></div>
+    <input type="hidden" id="pt-edit-id">
+    <input type="hidden" id="pt-wl-source-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-patient')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="savePatient()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── ICD-10 Daten (F-Kapitel – psychische Störungen) ───────────────────────────
+const ICD10 = [
+  {c:'F01',n:'Vaskuläre Demenz'},
+  {c:'F01.0',n:'Vaskuläre Demenz mit akutem Beginn'},
+  {c:'F01.1',n:'Multiinfarkt-Demenz'},
+  {c:'F01.2',n:'Subkortikale vaskuläre Demenz'},
+  {c:'F01.3',n:'Gemischte kortikale und subkortikale vaskuläre Demenz'},
+  {c:'F01.8',n:'Sonstige vaskuläre Demenz'},
+  {c:'F01.9',n:'Vaskuläre Demenz, nicht näher bezeichnet'},
+  {c:'F03',n:'Nicht näher bezeichnete Demenz'},
+  {c:'F04',n:'Organisches amnestisches Syndrom, nicht durch Alkohol oder andere psychotrope Substanzen bedingt'},
+  {c:'F05',n:'Delir, nicht durch Alkohol oder andere psychotrope Substanzen bedingt'},
+  {c:'F05.0',n:'Delir ohne Demenz'},
+  {c:'F05.1',n:'Delir bei Demenz'},
+  {c:'F05.8',n:'Sonstige Formen des Delirs'},
+  {c:'F05.9',n:'Delir, nicht näher bezeichnet'},
+  {c:'F06',n:'Andere psychische Störungen aufgrund einer Schädigung oder Funktionsstörung des Gehirns oder einer körperlichen Krankheit'},
+  {c:'F06.0',n:'Organische Halluzinose'},
+  {c:'F06.1',n:'Organische katatone Störung'},
+  {c:'F06.2',n:'Organische wahnhafte schizophreniforme Störung'},
+  {c:'F06.3',n:'Organische affektive Störungen'},
+  {c:'F06.4',n:'Organische Angststörung'},
+  {c:'F06.5',n:'Organische dissoziative Störung'},
+  {c:'F06.6',n:'Organische emotional labile asthenische Störung'},
+  {c:'F06.7',n:'Leichte kognitive Störung'},
+  {c:'F06.8',n:'Sonstige näher bezeichnete organische psychische Störungen aufgrund einer Schädigung oder Funktionsstörung des Gehirns oder einer körperlichen Krankheit'},
+  {c:'F06.9',n:'Nicht näher bezeichnete organische psychische Störung aufgrund einer Schädigung oder Funktionsstörung des Gehirns oder einer körperlichen Krankheit'},
+  {c:'F07',n:'Persönlichkeits- und Verhaltensstörung aufgrund einer Krankheit, Schädigung oder Funktionsstörung des Gehirns'},
+  {c:'F07.0',n:'Organische Persönlichkeitsstörung'},
+  {c:'F07.1',n:'Postenzephalitisches Syndrom'},
+  {c:'F07.2',n:'Organisches Psychosyndrom nach Schädelhirntrauma'},
+  {c:'F07.8',n:'Sonstige organische Persönlichkeits- und Verhaltensstörungen aufgrund einer Krankheit, Schädigung oder Funktionsstörung des Gehirns'},
+  {c:'F07.9',n:'Nicht näher bezeichnete organische Persönlichkeits- und Verhaltensstörung aufgrund einer Krankheit, Schädigung oder Funktionsstörung des Gehirns'},
+  {c:'F09',n:'Nicht näher bezeichnete organische oder symptomatische psychische Störung'},
+  {c:'F10',n:'Psychische und Verhaltensstörungen durch Alkohol'},
+  {c:'F10.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F10.1',n:'Schädlicher Gebrauch'},
+  {c:'F10.2',n:'Abhängigkeitssyndrom'},
+  {c:'F10.3',n:'Entzugssyndrom'},
+  {c:'F10.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F10.5',n:'Psychotische Störung'},
+  {c:'F10.6',n:'Amnestisches Syndrom'},
+  {c:'F10.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F10.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F10.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F11',n:'Psychische und Verhaltensstörungen durch Opioide'},
+  {c:'F11.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F11.1',n:'Schädlicher Gebrauch'},
+  {c:'F11.2',n:'Abhängigkeitssyndrom'},
+  {c:'F11.3',n:'Entzugssyndrom'},
+  {c:'F11.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F11.5',n:'Psychotische Störung'},
+  {c:'F11.6',n:'Amnestisches Syndrom'},
+  {c:'F11.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F11.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F11.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F12',n:'Psychische und Verhaltensstörungen durch Cannabinoide'},
+  {c:'F12.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F12.1',n:'Schädlicher Gebrauch'},
+  {c:'F12.2',n:'Abhängigkeitssyndrom'},
+  {c:'F12.3',n:'Entzugssyndrom'},
+  {c:'F12.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F12.5',n:'Psychotische Störung'},
+  {c:'F12.6',n:'Amnestisches Syndrom'},
+  {c:'F12.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F12.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F12.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F13',n:'Psychische und Verhaltensstörungen durch Sedativa oder Hypnotika'},
+  {c:'F13.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F13.1',n:'Schädlicher Gebrauch'},
+  {c:'F13.2',n:'Abhängigkeitssyndrom'},
+  {c:'F13.3',n:'Entzugssyndrom'},
+  {c:'F13.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F13.5',n:'Psychotische Störung'},
+  {c:'F13.6',n:'Amnestisches Syndrom'},
+  {c:'F13.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F13.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F13.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F14',n:'Psychische und Verhaltensstörungen durch Kokain'},
+  {c:'F14.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F14.1',n:'Schädlicher Gebrauch'},
+  {c:'F14.2',n:'Abhängigkeitssyndrom'},
+  {c:'F14.3',n:'Entzugssyndrom'},
+  {c:'F14.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F14.5',n:'Psychotische Störung'},
+  {c:'F14.6',n:'Amnestisches Syndrom'},
+  {c:'F14.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F14.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F14.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F15',n:'Psychische und Verhaltensstörungen durch andere Stimulanzien, einschließlich Koffein'},
+  {c:'F15.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F15.1',n:'Schädlicher Gebrauch'},
+  {c:'F15.2',n:'Abhängigkeitssyndrom'},
+  {c:'F15.3',n:'Entzugssyndrom'},
+  {c:'F15.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F15.5',n:'Psychotische Störung'},
+  {c:'F15.6',n:'Amnestisches Syndrom'},
+  {c:'F15.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F15.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F15.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F16',n:'Psychische und Verhaltensstörungen durch Halluzinogene'},
+  {c:'F16.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F16.1',n:'Schädlicher Gebrauch'},
+  {c:'F16.2',n:'Abhängigkeitssyndrom'},
+  {c:'F16.3',n:'Entzugssyndrom'},
+  {c:'F16.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F16.5',n:'Psychotische Störung'},
+  {c:'F16.6',n:'Amnestisches Syndrom'},
+  {c:'F16.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F16.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F16.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F17',n:'Psychische und Verhaltensstörungen durch Tabak'},
+  {c:'F17.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F17.1',n:'Schädlicher Gebrauch'},
+  {c:'F17.2',n:'Abhängigkeitssyndrom'},
+  {c:'F17.3',n:'Entzugssyndrom'},
+  {c:'F17.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F17.5',n:'Psychotische Störung'},
+  {c:'F17.6',n:'Amnestisches Syndrom'},
+  {c:'F17.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F17.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F17.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F18',n:'Psychische und Verhaltensstörungen durch flüchtige Lösungsmittel'},
+  {c:'F18.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F18.1',n:'Schädlicher Gebrauch'},
+  {c:'F18.2',n:'Abhängigkeitssyndrom'},
+  {c:'F18.3',n:'Entzugssyndrom'},
+  {c:'F18.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F18.5',n:'Psychotische Störung'},
+  {c:'F18.6',n:'Amnestisches Syndrom'},
+  {c:'F18.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F18.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F18.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F19',n:'Psychische und Verhaltensstörungen durch multiplen Substanzgebrauch und Konsum anderer psychotroper Substanzen'},
+  {c:'F19.0',n:'Akute Intoxikation akuter Rausch'},
+  {c:'F19.1',n:'Schädlicher Gebrauch'},
+  {c:'F19.2',n:'Abhängigkeitssyndrom'},
+  {c:'F19.3',n:'Entzugssyndrom'},
+  {c:'F19.4',n:'Entzugssyndrom mit Delir'},
+  {c:'F19.5',n:'Psychotische Störung'},
+  {c:'F19.6',n:'Amnestisches Syndrom'},
+  {c:'F19.7',n:'Restzustand und verzögert auftretende psychotische Störung'},
+  {c:'F19.8',n:'Sonstige psychische und Verhaltensstörungen'},
+  {c:'F19.9',n:'Nicht näher bezeichnete psychische und Verhaltensstörung'},
+  {c:'F20',n:'Schizophrenie'},
+  {c:'F20.0',n:'Paranoide Schizophrenie'},
+  {c:'F20.1',n:'Hebephrene Schizophrenie'},
+  {c:'F20.2',n:'Katatone Schizophrenie'},
+  {c:'F20.3',n:'Undifferenzierte Schizophrenie'},
+  {c:'F20.4',n:'Postschizophrene Depression'},
+  {c:'F20.5',n:'Schizophrenes Residuum'},
+  {c:'F20.6',n:'Schizophrenia simplex'},
+  {c:'F20.8',n:'Sonstige Schizophrenie'},
+  {c:'F20.9',n:'Schizophrenie, nicht näher bezeichnet'},
+  {c:'F21',n:'Schizotype Störung'},
+  {c:'F22',n:'Anhaltende wahnhafte Störungen'},
+  {c:'F22.0',n:'Wahnhafte Störung'},
+  {c:'F22.8',n:'Sonstige anhaltende wahnhafte Störungen'},
+  {c:'F22.9',n:'Anhaltende wahnhafte Störung, nicht näher bezeichnet'},
+  {c:'F23',n:'Akute vorübergehende psychotische Störungen'},
+  {c:'F23.0',n:'Akute polymorphe psychotische Störung ohne Symptome einer Schizophrenie'},
+  {c:'F23.1',n:'Akute polymorphe psychotische Störung mit Symptomen einer Schizophrenie'},
+  {c:'F23.2',n:'Akute schizophreniforme psychotische Störung'},
+  {c:'F23.3',n:'Sonstige akute vorwiegend wahnhafte psychotische Störungen'},
+  {c:'F23.8',n:'Sonstige akute vorübergehende psychotische Störungen'},
+  {c:'F23.9',n:'Akute vorübergehende psychotische Störung, nicht näher bezeichnet'},
+  {c:'F24',n:'Induzierte wahnhafte Störung'},
+  {c:'F25',n:'Schizoaffektive Störungen'},
+  {c:'F25.0',n:'Schizoaffektive Störung, gegenwärtig manisch'},
+  {c:'F25.1',n:'Schizoaffektive Störung, gegenwärtig depressiv'},
+  {c:'F25.2',n:'Gemischte schizoaffektive Störung'},
+  {c:'F25.8',n:'Sonstige schizoaffektive Störungen'},
+  {c:'F25.9',n:'Schizoaffektive Störung, nicht näher bezeichnet'},
+  {c:'F28',n:'Sonstige nichtorganische psychotische Störungen'},
+  {c:'F29',n:'Nicht näher bezeichnete nichtorganische Psychose'},
+  {c:'F30',n:'Manische Episode'},
+  {c:'F30.0',n:'Hypomanie'},
+  {c:'F30.1',n:'Manie ohne psychotische Symptome'},
+  {c:'F30.2',n:'Manie mit psychotischen Symptomen'},
+  {c:'F30.8',n:'Sonstige manische Episoden'},
+  {c:'F30.9',n:'Manische Episode, nicht näher bezeichnet'},
+  {c:'F31',n:'Bipolare affektive Störung'},
+  {c:'F31.0',n:'Bipolare affektive Störung, gegenwärtig hypomanische Episode'},
+  {c:'F31.1',n:'Bipolare affektive Störung, gegenwärtig manische Episode ohne psychotische Symptome'},
+  {c:'F31.2',n:'Bipolare affektive Störung, gegenwärtig manische Episode mit psychotischen Symptomen'},
+  {c:'F31.3',n:'Bipolare affektive Störung, gegenwärtig leichte oder mittelgradige depressive Episode'},
+  {c:'F31.4',n:'Bipolare affektive Störung, gegenwärtig schwere depressive Episode ohne psychotische Symptome'},
+  {c:'F31.5',n:'Bipolare affektive Störung, gegenwärtig schwere depressive Episode mit psychotischen Symptomen'},
+  {c:'F31.6',n:'Bipolare affektive Störung, gegenwärtig gemischte Episode'},
+  {c:'F31.7',n:'Bipolare affektive Störung, gegenwärtig remittiert'},
+  {c:'F31.8',n:'Sonstige bipolare affektive Störungen'},
+  {c:'F31.9',n:'Bipolare affektive Störung, nicht näher bezeichnet'},
+  {c:'F32',n:'Depressive Episode'},
+  {c:'F32.0',n:'Leichte depressive Episode'},
+  {c:'F32.1',n:'Mittelgradige depressive Episode'},
+  {c:'F32.2',n:'Schwere depressive Episode ohne psychotische Symptome'},
+  {c:'F32.3',n:'Schwere depressive Episode mit psychotischen Symptomen'},
+  {c:'F32.8',n:'Sonstige depressive Episoden'},
+  {c:'F32.9',n:'Depressive Episode, nicht näher bezeichnet'},
+  {c:'F33',n:'Rezidivierende depressive Störung'},
+  {c:'F33.0',n:'Rezidivierende depressive Störung, gegenwärtig leichte Episode'},
+  {c:'F33.1',n:'Rezidivierende depressive Störung, gegenwärtig mittelgradige Episode'},
+  {c:'F33.2',n:'Rezidivierende depressive Störung, gegenwärtig schwere Episode ohne psychotische Symptome'},
+  {c:'F33.3',n:'Rezidivierende depressive Störung, gegenwärtig schwere Episode mit psychotischen Symptomen'},
+  {c:'F33.4',n:'Rezidivierende depressive Störung, gegenwärtig remittiert'},
+  {c:'F33.8',n:'Sonstige rezidivierende depressive Störungen'},
+  {c:'F33.9',n:'Rezidivierende depressive Störung, nicht näher bezeichnet'},
+  {c:'F34',n:'Anhaltende affektive Störungen'},
+  {c:'F34.0',n:'Zyklothymia'},
+  {c:'F34.1',n:'Dysthymia'},
+  {c:'F34.8',n:'Sonstige anhaltende affektive Störungen'},
+  {c:'F34.9',n:'Anhaltende affektive Störung, nicht näher bezeichnet'},
+  {c:'F38',n:'Andere affektive Störungen'},
+  {c:'F38.0',n:'Andere einzelne affektive Störungen'},
+  {c:'F38.1',n:'Andere rezidivierende affektive Störungen'},
+  {c:'F38.8',n:'Sonstige näher bezeichnete affektive Störungen'},
+  {c:'F39',n:'Nicht näher bezeichnete affektive Störung'},
+  {c:'F40',n:'Phobische Störungen'},
+  {c:'F40.0',n:'Agoraphobie'},
+  {c:'F40.00',n:'Ohne Angabe einer Panikstörung'},
+  {c:'F40.01',n:'Mit Panikstörung'},
+  {c:'F40.1',n:'Soziale Phobien'},
+  {c:'F40.2',n:'Spezifische (isolierte) Phobien'},
+  {c:'F40.8',n:'Sonstige phobische Störungen'},
+  {c:'F40.9',n:'Phobische Störung, nicht näher bezeichnet'},
+  {c:'F41',n:'Andere Angststörungen'},
+  {c:'F41.0',n:'Panikstörung episodisch paroxysmale Angst'},
+  {c:'F41.1',n:'Generalisierte Angststörung'},
+  {c:'F41.2',n:'Angst und depressive Störung, gemischt'},
+  {c:'F41.3',n:'Andere gemischte Angststörungen'},
+  {c:'F41.8',n:'Sonstige spezifische Angststörungen'},
+  {c:'F41.9',n:'Angststörung, nicht näher bezeichnet'},
+  {c:'F42',n:'Zwangsstörung'},
+  {c:'F42.0',n:'Vorwiegend Zwangsgedanken oder Grübelzwang'},
+  {c:'F42.1',n:'Vorwiegend Zwangshandlungen Zwangsrituale'},
+  {c:'F42.2',n:'Zwangsgedanken und -handlungen, gemischt'},
+  {c:'F42.8',n:'Sonstige Zwangsstörungen'},
+  {c:'F42.9',n:'Zwangsstörung, nicht näher bezeichnet'},
+  {c:'F43',n:'Reaktionen auf schwere Belastungen und Anpassungsstörungen'},
+  {c:'F43.0',n:'Akute Belastungsreaktion'},
+  {c:'F43.1',n:'Posttraumatische Belastungsstörung'},
+  {c:'F43.2',n:'Anpassungsstörungen'},
+  {c:'F43.8',n:'Sonstige Reaktionen auf schwere Belastung'},
+  {c:'F43.9',n:'Reaktion auf schwere Belastung, nicht näher bezeichnet'},
+  {c:'F44',n:'Dissoziative Störungen Konversionsstörungen'},
+  {c:'F44.0',n:'Dissoziative Amnesie'},
+  {c:'F44.1',n:'Dissoziative Fugue'},
+  {c:'F44.2',n:'Dissoziativer Stupor'},
+  {c:'F44.3',n:'Trance- und Besessenheitszustände'},
+  {c:'F44.4',n:'Dissoziative Bewegungsstörungen'},
+  {c:'F44.5',n:'Dissoziative Krampfanfälle'},
+  {c:'F44.6',n:'Dissoziative Sensibilitäts- und Empfindungsstörungen'},
+  {c:'F44.7',n:'Dissoziative Störungen Konversionsstörungen, gemischt'},
+  {c:'F44.8',n:'Sonstige dissoziative Störungen Konversionsstörungen'},
+  {c:'F44.80',n:'Ganser-Syndrom'},
+  {c:'F44.81',n:'Multiple Persönlichkeitsstörung'},
+  {c:'F44.82',n:'Transitorische dissoziative Störungen in Kindheit und Jugend'},
+  {c:'F44.88',n:'Sonstige näher bezeichnete dissoziative Störungen'},
+  {c:'F44.9',n:'Dissoziative Störung Konversionsstörung, nicht näher bezeichnet'},
+  {c:'F45',n:'Somatoforme Störungen'},
+  {c:'F45.0',n:'Somatisierungsstörung'},
+  {c:'F45.1',n:'Undifferenzierte Somatisierungsstörung'},
+  {c:'F45.2',n:'Hypochondrische Störung'},
+  {c:'F45.3',n:'Somatoforme autonome Funktionsstörung'},
+  {c:'F45.30',n:'Herz und Kreislaufsystem'},
+  {c:'F45.31',n:'Oberes Verdauungssystem'},
+  {c:'F45.32',n:'Unteres Verdauungssystem'},
+  {c:'F45.33',n:'Atmungssystem'},
+  {c:'F45.34',n:'Urogenitalsystem'},
+  {c:'F45.37',n:'Mehrere Organe und Systeme'},
+  {c:'F45.38',n:'Sonstige Organe und Systeme'},
+  {c:'F45.39',n:'Nicht näher bezeichnetes Organ oder System'},
+  {c:'F45.4',n:'Anhaltende Schmerzstörung'},
+  {c:'F45.40',n:'Anhaltende somatoforme Schmerzstörung'},
+  {c:'F45.41',n:'Chronische Schmerzstörung mit somatischen und psychischen Faktoren'},
+  {c:'F45.8',n:'Sonstige somatoforme Störungen'},
+  {c:'F45.9',n:'Somatoforme Störung, nicht näher bezeichnet'},
+  {c:'F48',n:'Andere neurotische Störungen'},
+  {c:'F48.0',n:'Neurasthenie'},
+  {c:'F48.1',n:'Depersonalisations- und Derealisationssyndrom'},
+  {c:'F48.8',n:'Sonstige neurotische Störungen'},
+  {c:'F48.9',n:'Neurotische Störung, nicht näher bezeichnet'},
+  {c:'F50',n:'Essstörungen'},
+  {c:'F50.0',n:'Anorexia nervosa'},
+  {c:'F50.00',n:'Anorexia nervosa, restriktiver Typ'},
+  {c:'F50.01',n:'Anorexia nervosa, aktiver Typ'},
+  {c:'F50.08',n:'Sonstige und nicht näher bezeichnete Anorexia nervosa'},
+  {c:'F50.1',n:'Atypische Anorexia nervosa'},
+  {c:'F50.2',n:'Bulimia nervosa'},
+  {c:'F50.3',n:'Atypische Bulimia nervosa'},
+  {c:'F50.4',n:'Essattacken bei anderen psychischen Störungen'},
+  {c:'F50.5',n:'Erbrechen bei anderen psychischen Störungen'},
+  {c:'F50.8',n:'Sonstige Essstörungen'},
+  {c:'F50.9',n:'Essstörung, nicht näher bezeichnet'},
+  {c:'F51',n:'Nichtorganische Schlafstörungen'},
+  {c:'F51.0',n:'Nichtorganische Insomnie'},
+  {c:'F51.1',n:'Nichtorganische Hypersomnie'},
+  {c:'F51.2',n:'Nichtorganische Störung des Schlaf-Wach-Rhythmus'},
+  {c:'F51.3',n:'Schlafwandeln Somnambulismus'},
+  {c:'F51.4',n:'Pavor nocturnus'},
+  {c:'F51.5',n:'Albträume Angstträume'},
+  {c:'F51.8',n:'Sonstige nichtorganische Schlafstörungen'},
+  {c:'F51.9',n:'Nichtorganische Schlafstörung, nicht näher bezeichnet'},
+  {c:'F52',n:'Sexuelle Funktionsstörungen, nicht verursacht durch eine organische Störung oder Krankheit'},
+  {c:'F52.0',n:'Mangel oder Verlust von sexuellem Verlangen'},
+  {c:'F52.1',n:'Sexuelle Aversion und mangelnde sexuelle Befriedigung'},
+  {c:'F52.2',n:'Versagen genitaler Reaktionen'},
+  {c:'F52.3',n:'Orgasmusstörung'},
+  {c:'F52.4',n:'Ejaculatio praecox'},
+  {c:'F52.5',n:'Nichtorganischer Vaginismus'},
+  {c:'F52.6',n:'Nichtorganische Dyspareunie'},
+  {c:'F52.7',n:'Gesteigertes sexuelles Verlangen'},
+  {c:'F52.8',n:'Sonstige sexuelle Funktionsstörungen, nicht verursacht durch eine organische Störung oder Krankheit'},
+  {c:'F52.9',n:'Nicht näher bezeichnete sexuelle Funktionsstörung, nicht verursacht durch eine organische Störung oder Krankheit'},
+  {c:'F53',n:'Psychische oder Verhaltensstörungen im Wochenbett, anderenorts nicht klassifiziert'},
+  {c:'F53.0',n:'Leichte psychische und Verhaltensstörungen im Wochenbett, anderenorts nicht klassifiziert'},
+  {c:'F53.1',n:'Schwere psychische und Verhaltensstörungen im Wochenbett, anderenorts nicht klassifiziert'},
+  {c:'F53.8',n:'Sonstige psychische und Verhaltensstörungen im Wochenbett, anderenorts nicht klassifiziert'},
+  {c:'F53.9',n:'Psychische Störung im Wochenbett, nicht näher bezeichnet'},
+  {c:'F54',n:'Psychologische Faktoren oder Verhaltensfaktoren bei anderenorts klassifizierten Krankheiten'},
+  {c:'F55',n:'Schädlicher Gebrauch von nichtabhängigkeitserzeugenden Substanzen'},
+  {c:'F55.0',n:'Antidepressiva'},
+  {c:'F55.1',n:'Laxanzien'},
+  {c:'F55.2',n:'Analgetika'},
+  {c:'F55.3',n:'Antazida'},
+  {c:'F55.4',n:'Vitamine'},
+  {c:'F55.5',n:'Steroide und Hormone'},
+  {c:'F55.6',n:'Pflanzen oder Naturheilmittel'},
+  {c:'F55.8',n:'Sonstige Substanzen'},
+  {c:'F55.9',n:'Nicht näher bezeichnete Substanz'},
+  {c:'F59',n:'Nicht näher bezeichnete Verhaltensauffälligkeiten bei körperlichen Störungen und Faktoren'},
+  {c:'F60',n:'Spezifische Persönlichkeitsstörungen'},
+  {c:'F60.0',n:'Paranoide Persönlichkeitsstörung'},
+  {c:'F60.1',n:'Schizoide Persönlichkeitsstörung'},
+  {c:'F60.2',n:'Dissoziale Persönlichkeitsstörung'},
+  {c:'F60.3',n:'Emotional instabile Persönlichkeitsstörung'},
+  {c:'F60.30',n:'Impulsiver Typ'},
+  {c:'F60.31',n:'Borderline-Typ'},
+  {c:'F60.4',n:'Histrionische Persönlichkeitsstörung'},
+  {c:'F60.5',n:'Anankastische zwanghafte Persönlichkeitsstörung'},
+  {c:'F60.6',n:'Ängstliche (vermeidende) Persönlichkeitsstörung'},
+  {c:'F60.7',n:'Abhängige (asthenische) Persönlichkeitsstörung'},
+  {c:'F60.8',n:'Sonstige spezifische Persönlichkeitsstörungen'},
+  {c:'F60.9',n:'Persönlichkeitsstörung, nicht näher bezeichnet'},
+  {c:'F61',n:'Kombinierte und andere Persönlichkeitsstörungen'},
+  {c:'F62',n:'Andauernde Persönlichkeitsänderungen, nicht Folge einer Schädigung oder Krankheit des Gehirns'},
+  {c:'F62.0',n:'Andauernde Persönlichkeitsänderung nach Extrembelastung'},
+  {c:'F62.1',n:'Andauernde Persönlichkeitsänderung nach psychischer Krankheit'},
+  {c:'F62.8',n:'Sonstige andauernde Persönlichkeitsänderungen'},
+  {c:'F62.80',n:'Andauernde Persönlichkeitsänderung bei chronischem Schmerzsyndrom'},
+  {c:'F62.88',n:'Sonstige andauernde Persönlichkeitsänderungen'},
+  {c:'F62.9',n:'Andauernde Persönlichkeitsänderung, nicht näher bezeichnet'},
+  {c:'F63',n:'Abnorme Gewohnheiten und Störungen der Impulskontrolle'},
+  {c:'F63.0',n:'Pathologisches Spielen'},
+  {c:'F63.1',n:'Pathologische Brandstiftung Pyromanie'},
+  {c:'F63.2',n:'Pathologisches Stehlen Kleptomanie'},
+  {c:'F63.3',n:'Trichotillomanie'},
+  {c:'F63.8',n:'Sonstige abnorme Gewohnheiten und Störungen der Impulskontrolle'},
+  {c:'F63.9',n:'Abnorme Gewohnheit und Störung der Impulskontrolle, nicht näher bezeichnet'},
+  {c:'F64',n:'Störungen der Geschlechtsidentität'},
+  {c:'F64.0',n:'Transsexualismus'},
+  {c:'F64.1',n:'Transvestitismus unter Beibehaltung beider Geschlechtsrollen'},
+  {c:'F64.2',n:'Störung der Geschlechtsidentität des Kindesalters'},
+  {c:'F64.8',n:'Sonstige Störungen der Geschlechtsidentität'},
+  {c:'F64.9',n:'Störung der Geschlechtsidentität, nicht näher bezeichnet'},
+  {c:'F65',n:'Störungen der Sexualpräferenz'},
+  {c:'F65.0',n:'Fetischismus'},
+  {c:'F65.1',n:'Fetischistischer Transvestitismus'},
+  {c:'F65.2',n:'Exhibitionismus'},
+  {c:'F65.3',n:'Voyeurismus'},
+  {c:'F65.4',n:'Pädophilie'},
+  {c:'F65.5',n:'Sadomasochismus'},
+  {c:'F65.6',n:'Multiple Störungen der Sexualpräferenz'},
+  {c:'F65.8',n:'Sonstige Störungen der Sexualpräferenz'},
+  {c:'F65.9',n:'Störung der Sexualpräferenz, nicht näher bezeichnet'},
+  {c:'F66',n:'Psychische und Verhaltensstörungen in Verbindung mit der sexuellen Entwicklung und Orientierung'},
+  {c:'F66.0',n:'Sexuelle Reifungskrise'},
+  {c:'F66.1',n:'Ichdystone Sexualorientierung'},
+  {c:'F66.2',n:'Sexuelle Beziehungsstörung'},
+  {c:'F66.8',n:'Sonstige psychische und Verhaltensstörungen in Verbindung mit der sexuellen Entwicklung und Orientierung'},
+  {c:'F66.9',n:'Psychische und Verhaltensstörung in Verbindung mit der sexuellen Entwicklung und Orientierung, nicht näher bezeichnet'},
+  {c:'F68',n:'Andere Persönlichkeits- und Verhaltensstörungen'},
+  {c:'F68.0',n:'Entwicklung körperlicher Symptome aus psychischen Gründen'},
+  {c:'F68.1',n:'Artifizielle Störung absichtliches Erzeugen oder Vortäuschen von körperlichen oder psychischen Symptomen oder Behinderungen'},
+  {c:'F68.8',n:'Sonstige näher bezeichnete Persönlichkeits- und Verhaltensstörungen'},
+  {c:'F69',n:'Nicht näher bezeichnete Persönlichkeits- und Verhaltensstörung'},
+  {c:'F70',n:'Leichte Intelligenzminderung'},
+  {c:'F70.0',n:'Keine oder geringfügige Verhaltensstörung'},
+  {c:'F70.1',n:'Deutliche Verhaltensstörung, die Beobachtung oder Behandlung erfordert'},
+  {c:'F70.8',n:'Sonstige Verhaltensstörung'},
+  {c:'F70.9',n:'Ohne Angabe einer Verhaltensstörung'},
+  {c:'F71',n:'Mittelgradige Intelligenzminderung'},
+  {c:'F71.0',n:'Keine oder geringfügige Verhaltensstörung'},
+  {c:'F71.1',n:'Deutliche Verhaltensstörung, die Beobachtung oder Behandlung erfordert'},
+  {c:'F71.8',n:'Sonstige Verhaltensstörung'},
+  {c:'F71.9',n:'Ohne Angabe einer Verhaltensstörung'},
+  {c:'F72',n:'Schwere Intelligenzminderung'},
+  {c:'F72.0',n:'Keine oder geringfügige Verhaltensstörung'},
+  {c:'F72.1',n:'Deutliche Verhaltensstörung, die Beobachtung oder Behandlung erfordert'},
+  {c:'F72.8',n:'Sonstige Verhaltensstörung'},
+  {c:'F72.9',n:'Ohne Angabe einer Verhaltensstörung'},
+  {c:'F73',n:'Schwerste Intelligenzminderung'},
+  {c:'F73.0',n:'Keine oder geringfügige Verhaltensstörung'},
+  {c:'F73.1',n:'Deutliche Verhaltensstörung, die Beobachtung oder Behandlung erfordert'},
+  {c:'F73.8',n:'Sonstige Verhaltensstörung'},
+  {c:'F73.9',n:'Ohne Angabe einer Verhaltensstörung'},
+  {c:'F74',n:'Dissoziierte Intelligenz'},
+  {c:'F74.0',n:'Keine oder geringfügige Verhaltensstörung'},
+  {c:'F74.1',n:'Deutliche Verhaltensstörung, die Beobachtung oder Behandlung erfordert'},
+  {c:'F74.8',n:'Sonstige Verhaltensstörung'},
+  {c:'F74.9',n:'Ohne Angabe einer Verhaltensstörung'},
+  {c:'F78',n:'Andere Intelligenzminderung'},
+  {c:'F78.0',n:'Keine oder geringfügige Verhaltensstörung'},
+  {c:'F78.1',n:'Deutliche Verhaltensstörung, die Beobachtung oder Behandlung erfordert'},
+  {c:'F78.8',n:'Sonstige Verhaltensstörung'},
+  {c:'F78.9',n:'Ohne Angabe einer Verhaltensstörung'},
+  {c:'F79',n:'Nicht näher bezeichnete Intelligenzminderung'},
+  {c:'F79.0',n:'Keine oder geringfügige Verhaltensstörung'},
+  {c:'F79.1',n:'Deutliche Verhaltensstörung, die Beobachtung oder Behandlung erfordert'},
+  {c:'F79.8',n:'Sonstige Verhaltensstörung'},
+  {c:'F79.9',n:'Ohne Angabe einer Verhaltensstörung'},
+  {c:'F80',n:'Umschriebene Entwicklungsstörungen des Sprechens und der Sprache'},
+  {c:'F80.0',n:'Artikulationsstörung'},
+  {c:'F80.1',n:'Expressive Sprachstörung'},
+  {c:'F80.2',n:'Rezeptive Sprachstörung'},
+  {c:'F80.20',n:'Auditive Verarbeitungs- und Wahrnehmungsstörung AVWS'},
+  {c:'F80.28',n:'Sonstige rezeptive Sprachstörung'},
+  {c:'F80.3',n:'Erworbene Aphasie mit Epilepsie Landau-Kleffner-Syndrom'},
+  {c:'F80.8',n:'Sonstige Entwicklungsstörungen des Sprechens oder der Sprache'},
+  {c:'F80.9',n:'Entwicklungsstörung des Sprechens oder der Sprache, nicht näher bezeichnet'},
+  {c:'F81',n:'Umschriebene Entwicklungsstörungen schulischer Fertigkeiten'},
+  {c:'F81.0',n:'Lese- und Rechtschreibstörung'},
+  {c:'F81.1',n:'Isolierte Rechtschreibstörung'},
+  {c:'F81.2',n:'Rechenstörung'},
+  {c:'F81.3',n:'Kombinierte Störungen schulischer Fertigkeiten'},
+  {c:'F81.8',n:'Sonstige Entwicklungsstörungen schulischer Fertigkeiten'},
+  {c:'F81.9',n:'Entwicklungsstörung schulischer Fertigkeiten, nicht näher bezeichnet'},
+  {c:'F82',n:'Umschriebene Entwicklungsstörung der motorischen Funktionen'},
+  {c:'F82.0',n:'Umschriebene Entwicklungsstörung der Grobmotorik'},
+  {c:'F82.1',n:'Umschriebene Entwicklungsstörung der Fein- und Graphomotorik'},
+  {c:'F82.2',n:'Umschriebene Entwicklungsstörung der Mundmotorik'},
+  {c:'F82.9',n:'Umschriebene Entwicklungsstörung der motorischen Funktionen, nicht näher bezeichnet'},
+  {c:'F83',n:'Kombinierte umschriebene Entwicklungsstörungen'},
+  {c:'F84',n:'Tief greifende Entwicklungsstörungen'},
+  {c:'F84.0',n:'Frühkindlicher Autismus'},
+  {c:'F84.1',n:'Atypischer Autismus'},
+  {c:'F84.2',n:'Rett-Syndrom'},
+  {c:'F84.3',n:'Andere desintegrative Störung des Kindesalters'},
+  {c:'F84.4',n:'Überaktive Störung mit Intelligenzminderung und Bewegungsstereotypien'},
+  {c:'F84.5',n:'Asperger-Syndrom'},
+  {c:'F84.8',n:'Sonstige tief greifende Entwicklungsstörungen'},
+  {c:'F84.9',n:'Tief greifende Entwicklungsstörung, nicht näher bezeichnet'},
+  {c:'F88',n:'Andere Entwicklungsstörungen'},
+  {c:'F89',n:'Nicht näher bezeichnete Entwicklungsstörung'},
+  {c:'F90',n:'Hyperkinetische Störungen'},
+  {c:'F90.0',n:'Einfache Aktivitäts- und Aufmerksamkeitsstörung'},
+  {c:'F90.1',n:'Hyperkinetische Störung des Sozialverhaltens'},
+  {c:'F90.8',n:'Sonstige hyperkinetische Störungen'},
+  {c:'F90.9',n:'Hyperkinetische Störung, nicht näher bezeichnet'},
+  {c:'F91',n:'Störungen des Sozialverhaltens'},
+  {c:'F91.0',n:'Auf den familiären Rahmen beschränkte Störung des Sozialverhaltens'},
+  {c:'F91.1',n:'Störung des Sozialverhaltens bei fehlenden sozialen Bindungen'},
+  {c:'F91.2',n:'Störung des Sozialverhaltens bei vorhandenen sozialen Bindungen'},
+  {c:'F91.3',n:'Störung des Sozialverhaltens mit oppositionellem, aufsässigem Verhalten'},
+  {c:'F91.8',n:'Sonstige Störungen des Sozialverhaltens'},
+  {c:'F91.9',n:'Störung des Sozialverhaltens, nicht näher bezeichnet'},
+  {c:'F92',n:'Kombinierte Störung des Sozialverhaltens und der Emotionen'},
+  {c:'F92.0',n:'Störung des Sozialverhaltens mit depressiver Störung'},
+  {c:'F92.8',n:'Sonstige kombinierte Störung des Sozialverhaltens und der Emotionen'},
+  {c:'F92.9',n:'Kombinierte Störung des Sozialverhaltens und der Emotionen, nicht näher bezeichnet'},
+  {c:'F93',n:'Emotionale Störungen des Kindesalters'},
+  {c:'F93.0',n:'Emotionale Störung mit Trennungsangst des Kindesalters'},
+  {c:'F93.1',n:'Phobische Störung des Kindesalters'},
+  {c:'F93.2',n:'Störung mit sozialer Ängstlichkeit des Kindesalters'},
+  {c:'F93.3',n:'Emotionale Störung mit Geschwisterrivalität'},
+  {c:'F93.8',n:'Sonstige emotionale Störungen des Kindesalters'},
+  {c:'F93.9',n:'Emotionale Störung des Kindesalters, nicht näher bezeichnet'},
+  {c:'F94',n:'Störungen sozialer Funktionen mit Beginn in der Kindheit und Jugend'},
+  {c:'F94.0',n:'Elektiver Mutismus'},
+  {c:'F94.1',n:'Reaktive Bindungsstörung des Kindesalters'},
+  {c:'F94.2',n:'Bindungsstörung des Kindesalters mit Enthemmung'},
+  {c:'F94.8',n:'Sonstige Störungen sozialer Funktionen mit Beginn in der Kindheit'},
+  {c:'F94.9',n:'Störung sozialer Funktionen mit Beginn in der Kindheit, nicht näher bezeichnet'},
+  {c:'F95',n:'Ticstörungen'},
+  {c:'F95.0',n:'Vorübergehende Ticstörung'},
+  {c:'F95.1',n:'Chronische motorische oder vokale Ticstörung'},
+  {c:'F95.2',n:'Kombinierte vokale und multiple motorische Tics Tourette-Syndrom'},
+  {c:'F95.8',n:'Sonstige Ticstörungen'},
+  {c:'F95.9',n:'Ticstörung, nicht näher bezeichnet'},
+  {c:'F98',n:'Andere Verhaltens- und emotionale Störungen mit Beginn in der Kindheit und Jugend'},
+  {c:'F98.0',n:'Nichtorganische Enuresis'},
+  {c:'F98.00',n:'Enuresis nocturna'},
+  {c:'F98.01',n:'Enuresis diurna'},
+  {c:'F98.02',n:'Enuresis nocturna et diurna'},
+  {c:'F98.08',n:'Sonstige und nicht näher bezeichnete nichtorganische Enuresis'},
+  {c:'F98.1',n:'Nichtorganische Enkopresis'},
+  {c:'F98.2',n:'Fütterstörung im frühen Kindesalter'},
+  {c:'F98.3',n:'Pica im Kindesalter'},
+  {c:'F98.4',n:'Stereotype Bewegungsstörungen'},
+  {c:'F98.40',n:'Ohne Selbstverletzung'},
+  {c:'F98.41',n:'Mit Selbstverletzung'},
+  {c:'F98.49',n:'Ohne Angabe einer Selbstverletzung'},
+  {c:'F98.5',n:'Stottern Stammeln'},
+  {c:'F98.6',n:'Poltern'},
+  {c:'F98.8',n:'Sonstige näher bezeichnete Verhaltens- und emotionale Störungen mit Beginn in der Kindheit und Jugend'},
+  {c:'F98.80',n:'Aufmerksamkeitsstörung ohne Hyperaktivität mit Beginn in der Kindheit und Jugend'},
+  {c:'F98.88',n:'Sonstige näher bezeichnete Verhaltens- und emotionale Störungen mit Beginn in der Kindheit und Jugend'},
+  {c:'F98.9',n:'Nicht näher bezeichnete Verhaltens- oder emotionale Störungen mit Beginn in der Kindheit und Jugend'},
+  {c:'F99',n:'Psychische Störung ohne nähere Angabe'}
+];
+
+// ── Storage (IndexedDB mit localStorage-Migration & In-Memory-Cache) ────────────
+// Daten liegen in IndexedDB. Damit alle bestehenden, synchronen load*/save*-Aufrufe
+// unverändert funktionieren, hält ein In-Memory-Cache (MEM) den aktuellen Stand;
+// Schreibvorgänge werden asynchron nach IndexedDB persistiert.
+const SK_P='psycho_patients', SK_A='psycho_appts', SK_G='psycho_groups', SK_W='psycho_waitlist';
+// Abrechenbare Sitzungstypen (Telefontermine zählen nicht)
+const SESSION_TYPES=new Set(['probatorik','et','gt','tss','selbst','privat']);
+// Prüft ob ein Termin bereits stattgefunden hat (Datum + Uhrzeit)
+function apptHasPassed(a){
+  const today=todayStr();
+  if(a.date<today)return true;
+  if(a.date>today)return false;
+  // Heute: Uhrzeit vergleichen
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const[h,m]=(a.time||'00:00').split(':').map(Number);
+  return nowMin>=(h*60+m);
+}
+const TA_KEYS=[
+  {key:'probatorik',       label:'Probatorik abgeschlossen (5/5)', auto:true},
+  {key:'konsiliBeantragt', label:'Konsiliarbericht beantragt',      auto:false},
+  {key:'konsiliErstellt',  label:'Konsiliarbericht erstellt',       auto:false},
+  {key:'antragAusgefuellt',label:'Therapieantrag ausgefüllt',       auto:false},
+  {key:'antragEingereicht',label:'Antrag eingereicht',              auto:false},
+  {key:'kostenzusage',     label:'Kostenzusage erhalten',           auto:false},
+];
+const SK_ALL=[SK_P,SK_A,SK_G,SK_W];
+const IDB_NAME='terminkalenderDB', IDB_VERSION=1, IDB_STORE='data';
+
+let _idb=null;        // gecachtes IDBDatabase-Handle
+let _useIDB=true;     // false → Fallback auf localStorage (z.B. privater Modus)
+const MEM={};         // In-Memory-Cache: Schlüssel → Array
+
+function openIDB(){
+  return new Promise((resolve,reject)=>{
+    if(_idb){resolve(_idb);return;}
+    if(!('indexedDB' in window)||!window.indexedDB){reject(new Error('IndexedDB nicht verfügbar'));return;}
+    const req=indexedDB.open(IDB_NAME,IDB_VERSION);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess=e=>{_idb=e.target.result; resolve(_idb);};
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+function idbGet(db,key){
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+function idbPut(db,key,val){
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(JSON.parse(JSON.stringify(val)),key);
+    req.onsuccess=()=>resolve();
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+
+// Defensiv parsen: ein korrupter localStorage-Eintrag soll nicht die ganze App crashen.
+function lsLoad(key){
+  try{
+    const v=JSON.parse(localStorage.getItem(key)||'[]');
+    return Array.isArray(v)?v:[];
+  }catch(e){
+    console.warn('Beschädigte Daten in',key,'– ignoriert.',e);
+    return [];
+  }
+}
+
+// Beim Start: IndexedDB öffnen, alle Schlüssel in den Cache laden, ggf. aus
+// localStorage migrieren. Bei fehlender IndexedDB-Unterstützung Fallback auf localStorage.
+async function loadDB(){
+  try{
+    const db=await openIDB();
+    let migrated=false;
+    for(const key of SK_ALL){
+      let val=await idbGet(db,key);
+      if(!Array.isArray(val)){
+        // Migration: vorhandenen localStorage-Eintrag übernehmen
+        if(localStorage.getItem(key)!==null){ val=lsLoad(key); await idbPut(db,key,val); migrated=true; }
+        else val=[];
+      }
+      MEM[key]=val;
+    }
+    if(migrated){
+      SK_ALL.forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+      console.info('Von localStorage zu IndexedDB migriert.');
+    }
+  }catch(e){
+    console.warn('IndexedDB nicht verfügbar – nutze localStorage.',e);
+    _useIDB=false;
+    SK_ALL.forEach(k=>{MEM[k]=lsLoad(k);});
+  }
+}
+
+// Synchrones Lesen aus dem Cache (alle bestehenden Aufrufe bleiben unverändert).
+function loadJSON(key){ return Array.isArray(MEM[key])?MEM[key]:[]; }
+function loadPatients(){return loadJSON(SK_P)}
+function loadAppts(){return loadJSON(SK_A)}
+function loadGroups(){return loadJSON(SK_G)}
+function loadWaitlist(){return loadJSON(SK_W)}
+
+// Synchron in den Cache schreiben + asynchron persistieren.
+function saveJSON(key,d){
+  MEM[key]=d;
+  if(_useIDB){
+    openIDB().then(db=>idbPut(db,key,d)).catch(e=>{
+      console.error('Speichern (IndexedDB) fehlgeschlagen für',key,e);
+      try{ localStorage.setItem(key,JSON.stringify(d)); }
+      catch(e2){ alert('Speichern fehlgeschlagen (Speicher voll oder gesperrt). Bitte ein Backup exportieren.'); }
+    });
+    return true;
+  }
+  try{
+    localStorage.setItem(key,JSON.stringify(d));
+    return true;
+  }catch(e){
+    console.error('Speichern fehlgeschlagen für',key,e);
+    alert('Speichern fehlgeschlagen (Speicher voll oder gesperrt). Bitte ein Backup exportieren.');
+    return false;
+  }
+}
+function savePatients(d){return saveJSON(SK_P,d)}
+function saveAppts(d){return saveJSON(SK_A,d)}
+function saveGroups(d){return saveJSON(SK_G,d)}
+function saveWaitlist(d){return saveJSON(SK_W,d)}
+
+const MONTHS=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DAYS=['Mo','Di','Mi','Do','Fr','Sa','So'];
+const TYPE_LABEL={probatorik:'Probatorik',et:'Einzeltherapie',gt:'Gruppentherapie',tss:'TSS',selbst:'Selbstzahler',privat:'Privat',telefon:'Telefontermin',canceled:'Abgesagt',noshow:'Nicht erschienen'};
+const TYPE_COLOR={probatorik:'konsult',et:'et',gt:'gt',tss:'vt',selbst:'amber',privat:'pink',telefon:'phone',canceled:'canceled',noshow:'noshow'};
+const AV_COLORS=['av-blue','av-teal','av-amber','av-purple','av-gray'];
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function pad(n){return n<10?'0'+n:n}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function formatDate(s){if(!s)return'–';const[y,m,d]=s.split('-');return pad(parseInt(d,10))+'.'+pad(parseInt(m,10))+'.'+y}
+function avColor(name){let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))%AV_COLORS.length;return AV_COLORS[h]}
+function avInitials(name){const p=String(name||'').split(/[,\s]+/).filter(Boolean);return esc(((p[0]||'')[0]||'').toUpperCase()+((p[1]||'')[0]||'').toUpperCase())}
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+// HTML-Escaping für alle in innerHTML interpolierten Nutzereingaben (auch in Attributwerten).
+function esc(str){
+  if(str===null||str===undefined)return'';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+let viewYear=new Date().getFullYear(), viewMonth=new Date().getMonth(), currentTab='kalender';
+
+// ── ICD search ────────────────────────────────────────────────────────────────
+let selectedICDs=[];
+function searchICD(q){
+  const dd=document.getElementById('icd-dropdown');
+  if(!q||q.length<1){dd.classList.add('hidden');return}
+  const ql=q.toLowerCase();
+  const hits=ICD10.filter(x=>x.c.toLowerCase().startsWith(ql)||x.n.toLowerCase().includes(ql)).slice(0,18);
+  if(!hits.length){dd.classList.add('hidden');return}
+  dd.innerHTML=hits.map(x=>`<div class="icd-item" onclick="selectICD('${x.c}','${x.n.replace(/'/g,"\\'")}')"><span class="icd-code">${x.c}</span><span class="icd-name">${x.n}</span></div>`).join('');
+  dd.classList.remove('hidden');
+}
+function selectICD(code,name){
+  if(!selectedICDs.find(x=>x.c===code))selectedICDs.push({c:code,n:name,sicherheit:'V'});
+  document.getElementById('icd-search').value='';
+  document.getElementById('icd-dropdown').classList.add('hidden');
+  renderSelectedICDs();
+}
+function toggleSicherheit(code){
+  const entry=selectedICDs.find(x=>x.c===code);
+  if(entry)entry.sicherheit=entry.sicherheit==='V'?'G':'V';
+  renderSelectedICDs();
+}
+function removeICD(code){
+  selectedICDs=selectedICDs.filter(x=>x.c!==code);
+  renderSelectedICDs();
+}
+function renderSelectedICDs(){
+  document.getElementById('icd-selected-list').innerHTML=selectedICDs.map(x=>{
+    const s=x.sicherheit||'V';
+    const sBg=s==='G'?'var(--teal-bg)':'var(--amber-bg)';
+    const sCol=s==='G'?'var(--teal-text)':'var(--amber-text)';
+    const sBorder=s==='G'?'var(--teal-text)':'var(--amber)';
+    const sLabel=s==='G'?'G – gesichert':'V – Verdacht';
+    return`<span class="icd-selected"><strong>${esc(x.c)}</strong> ${esc(x.n)} <button onclick="toggleSicherheit('${x.c}')" title="${sLabel}" style="background:${sBg};color:${sCol};border:1px solid ${sBorder};border-radius:3px;font-size:10px;font-weight:700;padding:1px 5px;cursor:pointer;font-family:inherit">${s}</button><button onclick="removeICD('${x.c}')" title="Entfernen" style="background:none;border:none;cursor:pointer;color:var(--purple-text);font-size:14px;line-height:1;padding:0">&times;</button></span>`;
+  }).join('');
+  document.getElementById('pt-diag-codes').value=JSON.stringify(selectedICDs);
+}
+function loadICDsIntoForm(codes){
+  selectedICDs=(codes||[]).map(x=>({...x,sicherheit:x.sicherheit||'V'}));renderSelectedICDs();
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.icd-wrap'))document.getElementById('icd-dropdown').classList.add('hidden')});
+
+// ── Metrics ───────────────────────────────────────────────────────────────────
+function renderMetrics(){
+  const patients=loadPatients(), appts=loadAppts(), today=todayStr();
+  const todayA=appts.filter(a=>a.date===today&&a.type!=='canceled'&&a.type!=='noshow').length;
+  const m=new Date().getMonth(), y=new Date().getFullYear();
+  const monthA=appts.filter(a=>{const[ay,am]=a.date.split('-');return parseInt(ay)===y&&parseInt(am)-1===m&&a.type!=='canceled'&&a.type!=='noshow'}).length;
+  const canceled=appts.filter(a=>a.type==='canceled'&&!a.rescheduled).length;
+  const rescheduled=appts.filter(a=>a.type==='canceled'&&a.rescheduled).length;
+  const noshow=appts.filter(a=>a.type==='noshow').length;
+  const total=appts.filter(a=>a.type!=='canceled'&&a.type!=='noshow').length;
+  const rate=total+canceled+noshow>0?Math.round((canceled+noshow)/(total+canceled+noshow)*100):0;
+  const activePatients=patients.filter(p=>p.status!=='done');
+  const archivedPatients=patients.filter(p=>p.status==='done');
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric" style="cursor:pointer" onclick="switchTab('patienten');switchSubTab('patienten-liste')"><div class="metric-label">Aktive Patienten</div><div class="metric-val">${activePatients.length}</div><div class="metric-sub">${archivedPatients.length} archiviert</div></div>
+    <div class="metric"><div class="metric-label">Warteliste</div><div class="metric-val">${loadWaitlist().filter(e=>e.status!=='declined').length}</div><div class="metric-sub">${loadWaitlist().filter(e=>e.status==='new').length} nicht kontaktiert</div></div>
+    <div class="metric"><div class="metric-label">Termine heute</div><div class="metric-val">${todayA}</div><div class="metric-sub">${formatDate(today)}</div></div>
+    <div class="metric"><div class="metric-label">Sitzungen (Monat)</div><div class="metric-val">${monthA}</div><div class="metric-sub">${MONTHS[m]}</div></div>`;
+}
+
+// ── Tab ───────────────────────────────────────────────────────────────────────
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('${t}')"]`).classList.add('active');
+  document.getElementById('panel-'+t).classList.add('active');
+  currentTab=t;renderMetrics();
+  if(t==='kalender')renderCal();
+  if(t==='heute')renderHeute();
+  if(t==='patienten'){renderPatients();renderGroups();}
+  if(t==='warteliste')renderWaitlist();
+  if(t==='statistik')renderStats();
+}
+
+// ── Sub-tabs (Patienten / Gruppen) ────────────────────────────────────────────
+let currentSubTab='patienten-liste';
+function switchSubTab(sub){
+  currentSubTab=sub;
+  document.getElementById('patienten-liste-content').style.display=sub==='patienten-liste'?'block':'none';
+  document.getElementById('patienten-gruppen-content').style.display=sub==='patienten-gruppen'?'block':'none';
+  document.getElementById('patienten-archiv-content').style.display=sub==='patienten-archiv'?'block':'none';
+  document.getElementById('psearch').style.display=sub==='patienten-liste'||sub==='patienten-archiv'?'':'none';
+  document.getElementById('patient-sort').style.display=sub==='patienten-liste'?'':'none';
+  document.getElementById('btn-new-patient').style.display=sub==='patienten-liste'?'':'none';
+  // Tab button highlights
+  ['liste','gruppen','archiv'].forEach(t=>{
+    const btn=document.getElementById('subtab-'+t);
+    if(!btn)return;
+    const active=sub==='patienten-'+t;
+    btn.style.fontWeight=active?'600':'400';
+    btn.style.borderColor=active?'var(--purple)':'var(--border)';
+  });
+  if(sub==='patienten-gruppen'){
+    document.getElementById('btn-new-patient').style.display='none';
+    let bg=document.getElementById('btn-new-group');
+    if(!bg){bg=document.createElement('button');bg.id='btn-new-group';bg.className='btn btn-primary';bg.textContent='+ Gruppe';bg.onclick=openNewGroup;document.getElementById('btn-new-patient').parentNode.appendChild(bg);}
+    bg.style.display='';
+    renderGroups();
+  } else {
+    const bg=document.getElementById('btn-new-group');
+    if(bg)bg.style.display='none';
+    if(sub==='patienten-liste') document.getElementById('btn-new-patient').style.display='';
+  }
+  if(sub==='patienten-archiv'){
+    renderArchiv(document.getElementById('psearch').value);
+  }
+  if(sub==='patienten-liste'){
+    renderPatients(document.getElementById('psearch').value);
+  }
+}
+
+// ── Groups render ─────────────────────────────────────────────────────────────
+function renderGroups(){
+  const groups=loadGroups(), patients=loadPatients();
+  const el=document.getElementById('group-list');
+  if(!el)return;
+  if(!groups.length){el.innerHTML=`<div class="empty">Noch keine Gruppen. Klicke auf "+ Gruppe".</div>`;return;}
+  el.innerHTML=groups.map(g=>{
+    const members=patients.filter(p=>(g.memberIds||[]).includes(p.id));
+    return`<div class="patient-row" onclick="showGroup('${g.id}')" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+        <div>
+          <div class="patient-name">${esc(g.name)}</div>
+          ${g.desc?`<div class="patient-meta">${esc(g.desc)}</div>`:''}
+        </div>
+        <span class="badge badge-active">${members.length} Mitglieder</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${members.map(p=>`<span style="font-size:11px;background:var(--purple-bg);color:var(--purple-text);padding:2px 8px;border-radius:3px">${esc(p.name.split(',')[0])}</span>`).join('')}
+        ${!members.length?`<span style="font-size:12px;color:var(--text3)">Noch keine Mitglieder</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showGroup(id){
+  const g=loadGroups().find(x=>x.id===id);if(!g)return;
+  const patients=loadPatients();
+  const members=patients.filter(p=>(g.memberIds||[]).includes(p.id));
+  // show in detail panel
+  document.getElementById('detail-content').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div><div style="font-size:16px;font-weight:600;color:var(--text)">${esc(g.name)}</div>${g.desc?`<div style="font-size:13px;color:var(--text2)">${esc(g.desc)}</div>`:''}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="openEditGroup('${g.id}')">Bearbeiten</button>
+        <button class="btn btn-danger" onclick="deleteGroup('${g.id}')">Löschen</button>
+      </div>
+    </div>
+    <div class="detail-card">
+      <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Mitglieder (${members.length})</div>
+      ${members.length?members.map(p=>`<div class="srow">
+        <div class="av ${avColor(p.name)}" style="width:30px;height:30px;font-size:11px;flex-shrink:0">${avInitials(p.name)}</div>
+        <span style="flex:1;font-size:13px;color:var(--text)">${esc(p.name)}</span>
+        <span style="font-size:12px;color:var(--text2)">${esc(p.diag||'')}</span>
+      </div>`).join(''):`<div style="color:var(--text3);font-size:13px">Noch keine Mitglieder.</div>`}
+    </div>
+    <button class="btn btn-primary" onclick="openNewApptGroup('${g.id}')">Gruppentherapie-Termin anlegen</button>`;
+  _detailBackTarget='patienten-gruppen';
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-detail').classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('patienten')"]`).classList.add('active');
+}
+
+// ── Group CRUD ────────────────────────────────────────────────────────────────
+function openNewGroup(){
+  document.getElementById('modal-group-title').textContent='Neue Gruppe';
+  document.getElementById('grp-name').value='';
+  document.getElementById('grp-desc').value='';
+  document.getElementById('grp-edit-id').value='';
+  populateGroupMembers([]);
+  document.getElementById('modal-group').classList.remove('hidden');
+}
+function openEditGroup(id){
+  const g=loadGroups().find(x=>x.id===id);if(!g)return;
+  document.getElementById('modal-group-title').textContent='Gruppe bearbeiten';
+  document.getElementById('grp-name').value=g.name||'';
+  document.getElementById('grp-desc').value=g.desc||'';
+  document.getElementById('grp-edit-id').value=id;
+  populateGroupMembers(g.memberIds||[]);
+  document.getElementById('modal-group').classList.remove('hidden');
+}
+function populateGroupMembers(selectedIds){
+  const patients=loadPatients();
+  document.getElementById('grp-member-list').innerHTML=patients.length
+    ?patients.map(p=>`<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px">
+        <input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id)?'checked':''} style="width:15px;height:15px;accent-color:var(--purple)">
+        <span>${esc(p.name)}</span>${p.diagCodes&&p.diagCodes.length?`<span style="font-size:10px;color:var(--purple);background:var(--purple-bg);padding:1px 5px;border-radius:3px">${esc(p.diagCodes[0].c)}</span>`:''}
+      </label>`).join('')
+    :'<div style="color:var(--text3);font-size:13px">Zuerst Patienten anlegen.</div>';
+}
+function saveGroup(){
+  const name=document.getElementById('grp-name').value.trim();
+  if(!name){alert('Bitte Gruppenname eingeben.');return}
+  const memberIds=[...document.querySelectorAll('#grp-member-list input[type=checkbox]:checked')].map(c=>c.value);
+  const groups=loadGroups();
+  const editId=document.getElementById('grp-edit-id').value;
+  const data={name,desc:document.getElementById('grp-desc').value.trim(),memberIds};
+  if(editId){const i=groups.findIndex(x=>x.id===editId);if(i>=0)groups[i]={...groups[i],...data};}
+  else groups.push({id:uid(),...data});
+  saveGroups(groups);closeModal('modal-group');renderGroups();
+  showToast(editId?'Gruppe aktualisiert.':'Gruppe gespeichert.');
+}
+function deleteGroup(id){
+  if(!confirm('Gruppe löschen?'))return;
+  saveGroups(loadGroups().filter(x=>x.id!==id));
+  switchTab('patienten');switchSubTab('patienten-gruppen');
+  showToast('Gruppe gelöscht.');
+}
+
+// ── Open appt for whole group ─────────────────────────────────────────────────
+function openNewApptGroup(groupId){
+  openNewAppt();
+  document.getElementById('appt-type').value='gt';
+  onApptTypeChange(groupId);
+}
+
+// ── appt type change handler ──────────────────────────────────────────────────
+function onApptTypeChange(preselectedGroupId){
+  const type=document.getElementById('appt-type').value;
+  const isGroup=type==='gt';
+  const isPhone=type==='telefon';
+  const patRow=document.getElementById('appt-patient-row');
+  const grpRow=document.getElementById('appt-group-row');
+  const slotRow=document.getElementById('slot-row');
+  const phoneRow=document.getElementById('phone-time-row');
+
+  // Patient vs Group
+  if(isGroup){
+    patRow.classList.add('hidden');
+    grpRow.classList.remove('hidden');
+    const groups=loadGroups();
+    const sel=document.getElementById('appt-group');
+    sel.innerHTML='<option value="">– Gruppe wählen –</option>'+groups.map(g=>`<option value="${g.id}"${g.id===preselectedGroupId?' selected':''}>${esc(g.name)} (${(g.memberIds||[]).length} Mitgl.)</option>`).join('');
+  } else {
+    patRow.classList.remove('hidden');
+    grpRow.classList.add('hidden');
+  }
+
+  // Slots vs free time picker
+  if(isPhone){
+    slotRow.classList.add('hidden');
+    phoneRow.classList.remove('hidden');
+    document.getElementById('appt-time').value=document.getElementById('appt-phone-time').value||'08:00';
+    document.getElementById('appt-dur').value='30';
+  } else {
+    slotRow.classList.remove('hidden');
+    phoneRow.classList.add('hidden');
+    updateSlots();
+  }
+}
+
+let _detailBackTarget='patienten-liste';
+function detailBack(){switchTab('patienten');switchSubTab(_detailBackTarget);}
+
+function goToToday(){
+  const now=new Date();
+  viewYear=now.getFullYear();viewMonth=now.getMonth();
+  renderCal();
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function getSlotSummary(key){
+  const booked=new Set(loadAppts().filter(a=>a.date===key&&a.type!=='canceled').map(a=>a.time));
+  const freeS=SLOTS_SINGLE.filter(s=>!booked.has(s.t)).length;
+  const freeG=SLOTS_GROUP.filter(s=>!booked.has(s.t)).length;
+  const total=booked.size;
+  const parts=[];
+  if(freeS>0)parts.push(`${freeS} Einzelslot${freeS!==1?'s':''} frei`);
+  else parts.push('Einzelslots voll');
+  if(freeG>0)parts.push(`${freeG} Gruppenslot${freeG!==1?'s':''} frei`);
+  else parts.push('Gruppenslots voll');
+  if(total>0)parts.push(`${total} belegt`);
+  return parts.join('  ·  ');
+}
+
+function renderCal(){
+  document.getElementById('cal-title').textContent=MONTHS[viewMonth]+' '+viewYear;
+  document.getElementById('cal-headers').innerHTML=DAYS.map(d=>`<div class="cal-hdr">${d}</div>`).join('');
+  const appts=loadAppts(), apptMap={};
+  appts.forEach(a=>{(apptMap[a.date]=apptMap[a.date]||[]).push(a)});
+  let dow=new Date(viewYear,viewMonth,1).getDay();dow=dow===0?6:dow-1;
+  const dim=new Date(viewYear,viewMonth+1,0).getDate();
+  const dip=new Date(viewYear,viewMonth,0).getDate();
+  const today=todayStr(), patients=loadPatients();
+  let cells='';
+  for(let i=0;i<dow;i++)cells+=`<div class="cal-day other-month"><div class="cal-day-num">${dip-dow+1+i}</div></div>`;
+  for(let d=1;d<=dim;d++){
+    const key=viewYear+'-'+pad(viewMonth+1)+'-'+pad(d);
+    const list=apptMap[key]||[];
+    const isToday=key===today;
+    const dots=list.filter(a=>a.type!=='canceled').slice(0,3).map(a=>{
+      const p=patients.find(x=>x.id===a.patientId);
+      return`<div class="appt-dot ${TYPE_COLOR[a.type]||'et'}">${p?esc(p.name.split(',')[0]):'?'}</div>`;
+    }).join('');
+    const more=list.length>3?`<div style="font-size:9px;color:var(--text3);pointer-events:none">+${list.length-3}</div>`:'';
+    cells+=`<div class="cal-day${isToday?' today':''}" data-key="${key}"><div class="cal-day-num">${d}</div>${dots}${more}</div>`;
+  }
+  const rem=(7-(dow+dim)%7)%7;
+  for(let d=1;d<=rem;d++)cells+=`<div class="cal-day other-month"><div class="cal-day-num">${d}</div></div>`;
+  document.getElementById('cal-body').innerHTML=cells;
+  // attach events via JS — no inline handlers so clicks are never swallowed
+  document.querySelectorAll('#cal-body .cal-day:not(.other-month)').forEach(el=>{
+    const key=el.dataset.key;
+    el.addEventListener('click',()=>{hideCalTip();showDay(key);});
+    el.addEventListener('mouseenter',e=>showCalTip(e,key));
+    el.addEventListener('mouseleave',hideCalTip);
+  });
+}
+function changeMonth(dir){viewMonth+=dir;if(viewMonth>11){viewMonth=0;viewYear++;}else if(viewMonth<0){viewMonth=11;viewYear--;}renderCal()}
+
+// ── Hover tooltip ─────────────────────────────────────────────────────────────
+function showCalTip(e, key){
+  hideCalTip();
+  const cell=e.currentTarget;
+  const booked=new Set(loadAppts().filter(a=>a.date===key&&a.type!=='canceled').map(a=>a.time));
+  const freeS=SLOTS_SINGLE.filter(s=>!booked.has(s.t)).length;
+  const freeG=SLOTS_GROUP.filter(s=>!booked.has(s.t)).length;
+  const totalBooked=booked.size;
+  const tip=document.createElement('div');
+  tip.className='cal-tip';
+  tip.id='cal-tip-active';
+  tip.innerHTML=`
+    <div class="cal-tip-row"><span class="cal-tip-dot" style="background:#378ADD"></span><span>${freeS} Einzelslot${freeS!==1?'s':''} frei</span></div>
+    <div class="cal-tip-row"><span class="cal-tip-dot" style="background:#1D9E75"></span><span>${freeG} Gruppenslot${freeG!==1?'s':''} frei</span></div>
+    ${totalBooked>0?`<div class="cal-tip-row"><span class="cal-tip-dot" style="background:#9a9a94"></span><span>${totalBooked} belegt</span></div>`:''}`;
+  tip.style.display='block';
+  cell.appendChild(tip);
+}
+function hideCalTip(){
+  const old=document.getElementById('cal-tip-active');
+  if(old)old.remove();
+}
+
+// ── Day view with full slot grid ──────────────────────────────────────────────
+function showDay(key){
+  const patients=loadPatients();
+  const groups=loadGroups();
+  // Alle Termine des Tages (inkl. abgesagte) laden. Abgesagte Einzeltermine geben
+  // den Slot wieder frei und werden ausgeblendet; abgesagte Gruppenteilnehmer
+  // bleiben dagegen durchgestrichen sichtbar (haben eine groupId).
+  const dayAppts=loadAppts().filter(a=>a.date===key);
+  const activeAppts=dayAppts.filter(a=>a.type!=='canceled');
+  const visibleAppts=dayAppts.filter(a=>a.type!=='canceled'||a.groupId);
+  const toMin=t=>parseInt(t.split(':')[0])*60+parseInt(t.split(':')[1]);
+
+  // Alle (sichtbaren) Termine, die exakt zu einem Slot passen (gleiche Zeit + Dauer).
+  function slotBookings(slotStart, slotDur){
+    return visibleAppts.filter(a=>a.time===slotStart && (a.dur||60)===slotDur);
+  }
+  // Belegt ein AKTIVER Termin den Zeitraum? (für das Ausblenden freier Slots)
+  function overlapsAnyBooking(slotStart, slotDur){
+    const sStart=toMin(slotStart), sEnd=sStart+slotDur;
+    return activeAppts.some(a=>{
+      const bStart=toMin(a.time||'00:00'), bEnd=bStart+(a.dur||60);
+      return sStart<bEnd && sEnd>bStart;
+    });
+  }
+
+  // Eine Teilnehmer-Zeile (Name + Status + Aktionen) für einen Termin.
+  function partInner(a, metaTag){
+    const p=patients.find(x=>x.id===a.patientId);
+    const name=p?p.name:'Unbekannt';
+    const canceled=a.type==='canceled', noshow=a.type==='noshow';
+    const dim=canceled||noshow;
+    const statusLabel=canceled?(a.rescheduled?'Verlegt':'Abgesagt'):noshow?'No-Show':(TYPE_LABEL[a.type]||a.type);
+    const nameEl=p
+      ? `<div style="font-size:13px;font-weight:500;color:var(--blue);cursor:pointer;${canceled?'text-decoration:line-through;':''}${dim?'opacity:.7;':''};display:inline" onclick="showPatientCtxMenu(event,'${p.id}','${a.id}')">${esc(name)}</div>`
+      : `<div style="font-size:13px;font-weight:500;color:var(--text);${dim?'opacity:.7;':''}">${esc(name)}</div>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div>
+        ${nameEl}
+        <div style="display:flex;gap:5px;align-items:center;margin-top:3px;flex-wrap:wrap">
+          <span class="appt-dot ${TYPE_COLOR[a.type]||'et'}">${statusLabel}</span>
+          ${!dim&&metaTag?metaTag:''}
+          ${a.note?`<span style="font-size:11px;color:var(--text3)">· ${esc(a.note)}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+        ${!dim?`<button onclick="markAppt('${a.id}','canceled','${key}')" title="Abgesagt" style="background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;padding:3px 7px;color:var(--red-text);font-family:inherit;white-space:nowrap">📵 Abgesagt</button>
+        <button onclick="markAppt('${a.id}','noshow','${key}')" title="Nicht erschienen" style="background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;padding:3px 7px;color:var(--red-text);font-family:inherit;white-space:nowrap">🚫 No-Show</button>`:''}
+        ${dim?`<button onclick="restoreAppt('${a.id}','${key}')" title="Markierung zurücksetzen" style="background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;padding:3px 7px;color:var(--teal-text);font-family:inherit;white-space:nowrap">↩ Zurücksetzen</button>`:''}
+        ${!dim?`<button onclick="editAppt('${a.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:4px;color:var(--text2)" title="Bearbeiten">✏️</button>`:''}
+        <button onclick="deleteApptDay('${a.id}','${key}')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:4px;color:var(--red-text)" title="Löschen">✕</button>
+      </div>
+    </div>`;
+  }
+
+  const[y,m,d]=key.split('-');
+  const label=`${parseInt(d)}. ${MONTHS[parseInt(m)-1]} ${y}`;
+
+  const allSlots=[
+    ...SLOTS_SINGLE.map(s=>({...s,cat:'single'})),
+    ...SLOTS_GROUP.map(s=>({...s,cat:'group'}))
+  ].sort((a,b)=>a.t.localeCompare(b.t));
+
+  const shownIds=new Set();
+  let slotHtml='';
+  allSlots.forEach(s=>{
+    const booked=slotBookings(s.t, s.d).sort((a,b)=>{
+      const ca=a.type==='canceled'?1:0, cb=b.type==='canceled'?1:0;
+      if(ca!==cb)return ca-cb;
+      const na=(patients.find(x=>x.id===a.patientId)||{}).name||'';
+      const nb=(patients.find(x=>x.id===b.patientId)||{}).name||'';
+      return na.localeCompare(nb);
+    });
+    booked.forEach(a=>shownIds.add(a.id));
+    // Freier Slot, dessen Zeitraum aber durch eine aktive Buchung belegt ist → ausblenden
+    if(!booked.length && overlapsAnyBooking(s.t, s.d)) return;
+
+    const endH=parseInt(s.t.split(':')[0])+Math.floor(s.d/60);
+    const endM=pad(parseInt(s.t.split(':')[1])+(s.d%60));
+    const catLabel=s.cat==='group'?'Gruppe':'Einzel';
+    const catColor=s.cat==='group'?'var(--teal-text)':'var(--blue-text)';
+    const catBg=s.cat==='group'?'var(--teal-bg)':'var(--blue-bg)';
+
+    if(booked.length){
+      const anyNoshow=booked.some(a=>a.type==='noshow');
+      const allCanceled=booked.every(a=>a.type==='canceled');
+      const barColor=allCanceled?'var(--red-text)':anyNoshow?'var(--red-text)':'var(--border2)';
+      const isGroup=s.cat==='group';
+      const gId=(booked.find(a=>a.groupId)||{}).groupId;
+      const grp=gId?groups.find(g=>g.id===gId):null;
+      const catTag=`<span style="font-size:10px;background:${catBg};color:${catColor};padding:1px 6px;border-radius:3px;font-weight:500">${catLabel}</span>`;
+      const header=isGroup?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        ${catTag}
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${grp?esc(grp.name):'Gruppentermin'}</span>
+        <span style="font-size:11px;color:var(--text3)">${booked.length} Teilnehmer</span>
+      </div>`:'';
+      const rows=booked.map(a=>partInner(a, isGroup?'':catTag)).join('<div style="height:1px;background:var(--border);margin:8px 0"></div>');
+      slotHtml+=`<div style="display:flex;gap:10px;align-items:stretch;margin-bottom:6px">
+        <div style="width:86px;flex-shrink:0;text-align:right;padding-top:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2)">${s.t} Uhr</div>
+          <div style="font-size:10px;color:var(--text3)">${pad(endH)}:${endM} Uhr</div>
+        </div>
+        <div style="width:3px;border-radius:2px;flex-shrink:0;background:${barColor}"></div>
+        <div style="flex:1;border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;background:var(--surface)">${header}${rows}</div>
+      </div>`;
+    } else {
+      slotHtml+=`<div style="display:flex;gap:10px;align-items:stretch;margin-bottom:6px">
+        <div style="width:86px;flex-shrink:0;text-align:right;padding-top:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--text3)">${s.t} Uhr</div>
+          <div style="font-size:10px;color:var(--text3)">${pad(endH)}:${endM} Uhr</div>
+        </div>
+        <div style="width:3px;border-radius:2px;flex-shrink:0;background:var(--border)"></div>
+        <div style="flex:1;border:1px dashed var(--border);border-radius:var(--radius);padding:9px 12px;background:transparent;cursor:pointer"
+             onclick="openNewApptDateSlot('${key}','${s.t}',${s.d},'${s.cat==='group'?'gt':'et'}')"
+             onmouseenter="this.style.background='var(--surface2)';this.style.borderColor='var(--purple)'"
+             onmouseleave="this.style.background='transparent';this.style.borderColor='var(--border)'">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Frei</span>
+            <span style="font-size:10px;background:${catBg};color:${catColor};padding:1px 6px;border-radius:3px;font-weight:500">${catLabel}</span>
+            <span style="font-size:11px;color:var(--text3)">${s.d} min</span>
+            <span style="font-size:11px;color:var(--purple);margin-left:auto">+ Termin eintragen →</span>
+          </div>
+        </div>
+      </div>`;
+    }
+  });
+
+  // Termine, die zu keinem festen Slot passen (z.B. Telefontermine oder abweichende
+  // Zeiten/Dauern), würden sonst in der Tagesansicht fehlen → separat anzeigen.
+  const extras=visibleAppts.filter(a=>!shownIds.has(a.id)).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  let extraHtml='';
+  if(extras.length){
+    extraHtml+=`<div style="margin-top:14px;font-size:11px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--text3)">Weitere Termine</div>`;
+    extras.forEach(a=>{
+      const dur=a.dur||60;
+      const endMin=toMin(a.time||'00:00')+dur;
+      const endStr=pad(Math.floor(endMin/60))+':'+pad(endMin%60);
+      const durTag=`<span style="font-size:11px;color:var(--text3)">${dur} min</span>`;
+      extraHtml+=`<div style="display:flex;gap:10px;align-items:stretch;margin-bottom:6px;margin-top:6px">
+        <div style="width:86px;flex-shrink:0;text-align:right;padding-top:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2)">${a.time||'–'} Uhr</div>
+          <div style="font-size:10px;color:var(--text3)">${endStr} Uhr</div>
+        </div>
+        <div style="width:3px;border-radius:2px;flex-shrink:0;background:${a.type==='canceled'?'var(--red-text)':a.type==='noshow'?'var(--red-text)':'var(--border2)'}"></div>
+        <div style="flex:1;border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;background:var(--surface)">${partInner(a, durTag)}</div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('day-content').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem">
+      <div style="font-size:15px;font-weight:500;color:var(--text)">${label}</div>
+      <button class="btn btn-primary" onclick="openNewApptDate('${key}')">+ Termin</button>
+    </div>${slotHtml}${extraHtml}`;
+
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-day').classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('kalender')"]`).classList.add('active');
+}
+
+function deleteApptDay(id,key){
+  if(!confirm('Termin löschen?'))return;
+  saveAppts(loadAppts().filter(x=>x.id!==id));
+  renderMetrics();showDay(key);showToast('Termin gelöscht.');
+}
+
+// Versehentliche Absage/No-Show rückgängig machen: ursprünglichen Termintyp
+// (origType) wiederherstellen und Status entfernen.
+function restoreAppt(id,key){
+  const appts=loadAppts();
+  const i=appts.findIndex(x=>x.id===id);
+  if(i<0)return;
+  const a=appts[i];
+  const restored={...a, type:a.origType||'et', rescheduled:false};
+  delete restored.origType;
+  appts[i]=restored;
+  saveAppts(appts);
+  renderMetrics();showDay(key);showToast('Termin wiederhergestellt.');
+}
+
+function markAppt(id, status, key){
+  const appts=loadAppts();
+  const i=appts.findIndex(x=>x.id===id);
+  if(i<0)return;
+  const orig=appts[i];
+  // Ursprünglichen Termintyp bewahren (sonst geht er beim Absagen/No-Show verloren).
+  const origType=orig.origType||orig.type;
+  appts[i]={...orig, origType, type:status, rescheduled:false};
+  saveAppts(appts);
+  renderMetrics();
+  showDay(key);
+  if(status==='canceled'){
+    showToast('Als abgesagt markiert.');
+    setTimeout(()=>{
+      if(confirm('Möchtest du direkt einen Ersatztermin eintragen?')){
+        // mark original as rescheduled (= not a real dropout)
+        const a2=loadAppts();
+        const j=a2.findIndex(x=>x.id===id);
+        if(j>=0){a2[j].rescheduled=true;saveAppts(a2);}
+        openNewAppt();
+        populatePatientSelect(orig.patientId);
+        document.getElementById('appt-type').value=orig.origType||orig.type||'et';
+        checkProbatorik(orig.patientId);
+        onApptTypeChange();
+      }
+    },300);
+  } else {
+    showToast('Als nicht erschienen (No-Show) markiert.');
+  }
+}
+
+function openNewApptDateSlot(date,time,dur,type){
+  openNewAppt();
+  document.getElementById('appt-date').value=date;
+  document.getElementById('appt-type').value=type;
+  // Wichtig: Patienten-/Gruppen-Felder an die Sitzungsart anpassen, sonst bleibt
+  // bei einem Gruppen-Slot fälschlich das Patienten-Dropdown sichtbar.
+  onApptTypeChange();
+  document.getElementById('appt-time').value=time;
+  document.getElementById('appt-dur').value=dur;
+  updateSlots(time);
+}
+
+function backToKal(){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-kalender').classList.add('active');renderCal()}
+
+// ── Heute ─────────────────────────────────────────────────────────────────────
+function renderHeute(){
+  const today=todayStr();
+  const appts=loadAppts().filter(a=>a.date===today).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const patients=loadPatients();
+  const now=new Date();
+  const[y,m,d]=today.split('-');
+  const label=`${parseInt(d)}. ${MONTHS[parseInt(m)-1]} ${y}`;
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+    <div>
+      <div style="font-size:18px;font-weight:600;color:var(--text)">${label}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px">${appts.filter(a=>a.type!=='canceled').length} Termin${appts.filter(a=>a.type!=='canceled').length!==1?'e':''} heute</div>
+    </div>
+    <button class="btn btn-primary" onclick="openNewApptDate('${today}')">+ Termin</button>
+  </div>`;
+
+  if(!appts.length){
+    html+=`<div class="empty" style="padding:3rem 1rem">Keine Termine für heute.</div>`;
+  } else {
+    // Group by time slot visually
+    const slots=['09:00','11:00','13:00','15:00','16:00'];
+    const grouped={};
+    appts.forEach(a=>{
+      const key=a.time||'–';
+      (grouped[key]=grouped[key]||[]).push(a);
+    });
+    const allTimes=[...new Set(appts.map(a=>a.time||'–'))].sort();
+
+    html+=`<div style="display:flex;flex-direction:column;gap:8px">`;
+    allTimes.forEach(time=>{
+      grouped[time].forEach(a=>{
+        const p=patients.find(x=>x.id===a.patientId);
+        const name=p?p.name:'Unbekannt';
+        const endH=parseInt(time.split(':')[0])+Math.floor(a.dur/60);
+        const endM=parseInt(time.split(':')[1])+(a.dur%60);
+        const endStr=pad(endH)+':'+pad(endM);
+        const isCurrent=(()=>{
+          const[sh,sm]=time.split(':').map(Number);
+          const startMin=sh*60+sm, endMin=startMin+a.dur;
+          const nowMin=now.getHours()*60+now.getMinutes();
+          return nowMin>=startMin&&nowMin<endMin;
+        })();
+        const isPast=(()=>{
+          const[sh,sm]=time.split(':').map(Number);
+          return now.getHours()*60+now.getMinutes()>sh*60+sm+a.dur;
+        })();
+        html+=`<div style="display:flex;gap:12px;align-items:stretch">
+          <div style="width:60px;flex-shrink:0;text-align:right;padding-top:12px">
+            <div style="font-size:13px;font-weight:600;color:${isCurrent?'var(--purple)':isPast?'var(--text3)':'var(--text2)'}">${time}</div>
+            <div style="font-size:11px;color:var(--text3)">${endStr}</div>
+          </div>
+          <div style="width:3px;border-radius:2px;flex-shrink:0;background:${isCurrent?'var(--purple)':isPast?'var(--border)':'var(--border2)'}"></div>
+          <div style="flex:1;border:1px solid ${isCurrent?'var(--purple)':isPast?'var(--border)':'var(--border)'};border-radius:var(--radius);padding:10px 14px;background:${isCurrent?'var(--purple-bg)':'var(--surface)'};${isPast?'opacity:.6':''}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div>
+                <div style="font-size:14px;font-weight:500;color:var(--text)">${esc(name)}</div>
+                <div style="margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <span class="appt-dot ${TYPE_COLOR[a.type]||'et'}">${TYPE_LABEL[a.type]||a.type}</span>
+                  <span style="font-size:11px;color:var(--text3)">${a.dur} min</span>
+                  ${a.note?`<span style="font-size:11px;color:var(--text3)">· ${esc(a.note)}</span>`:''}
+                </div>
+                ${p&&p.diagCodes&&p.diagCodes.length?`<div style="margin-top:4px">${p.diagCodes.map(x=>`<span style="font-size:10px;background:var(--purple-bg);color:var(--purple-text);padding:1px 5px;border-radius:3px;font-weight:500;margin-right:3px">${esc(x.c)}</span>`).join('')}</div>`:''}
+              </div>
+              <div style="display:flex;gap:4px;flex-shrink:0">
+                <button onclick="editAppt('${a.id}')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:4px;color:var(--text2)" title="Bearbeiten">✏️</button>
+                <button onclick="deleteApptHeute('${a.id}')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:4px;color:var(--red-text)" title="Löschen">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      });
+    });
+    html+=`</div>`;
+  }
+  document.getElementById('heute-content').innerHTML=html;
+}
+
+function deleteApptHeute(id){
+  if(!confirm('Termin löschen?'))return;
+  saveAppts(loadAppts().filter(x=>x.id!==id));
+  renderMetrics();renderHeute();showToast('Termin gelöscht.');
+}
+
+// ── Patients ──────────────────────────────────────────────────────────────────
+function savePatientSort(v){localStorage.setItem('patientSort',v);}
+function loadPatientSort(){return localStorage.getItem('patientSort')||'nachname';}
+function applyPatientSort(fp, appts){
+  const sort=loadPatientSort();
+  const sel=document.getElementById('patient-sort');
+  if(sel&&sel.value!==sort)sel.value=sort;
+  const STATUS_ORDER={active:0,pause:1,done:2};
+  if(sort==='nachname'){
+    fp.sort((a,b)=>{
+      const la=a.name.split(',')[0].trim().toLowerCase();
+      const lb=b.name.split(',')[0].trim().toLowerCase();
+      return la.localeCompare(lb,'de');
+    });
+  } else if(sort==='termin'){
+    fp.sort((a,b)=>{
+      const na=appts.filter(x=>x.patientId===a.id&&x.date>=todayStr()&&x.type!=='canceled').sort((x,y)=>x.date.localeCompare(y.date))[0];
+      const nb=appts.filter(x=>x.patientId===b.id&&x.date>=todayStr()&&x.type!=='canceled').sort((x,y)=>x.date.localeCompare(y.date))[0];
+      if(!na&&!nb)return 0;
+      if(!na)return 1;
+      if(!nb)return -1;
+      return na.date.localeCompare(nb.date);
+    });
+  } else if(sort==='status'){
+    fp.sort((a,b)=>(STATUS_ORDER[a.status||'active']||0)-(STATUS_ORDER[b.status||'active']||0));
+  }
+  return fp;
+}
+function renderPatients(filter=''){
+  const patients=loadPatients(), appts=loadAppts(), list=document.getElementById('patient-list');
+  const fl=filter.toLowerCase();
+  let fp=patients.filter(p=>{
+    if(p.status==='done')return false; // im Archiv
+    if(!filter)return true;
+    if(p.name.toLowerCase().includes(fl))return true;
+    const codes=p.diagCodes||[];
+    return codes.some(x=>x.c.toLowerCase().includes(fl)||x.n.toLowerCase().includes(fl));
+  });
+  fp=applyPatientSort(fp, appts);
+  if(!fp.length){list.innerHTML=`<div class="empty">${patients.length?'Keine Treffer.':'Noch keine Patienten. Klicke auf "+ Patient".'}</div>`;return}
+  list.innerHTML=fp.map(p=>{
+    const pAppts=appts.filter(a=>a.patientId===p.id);
+    // Abrechenbare Sitzungen (Whitelist, ohne Telefon)
+    const sessCount=pAppts.filter(a=>SESSION_TYPES.has(a.type)&&apptHasPassed(a)).length;
+    const phoneCount=pAppts.filter(a=>a.type==='telefon'&&apptHasPassed(a)).length;
+    const sessLabel=phoneCount>0?`${sessCount} <span style="font-size:9px;color:var(--text3);font-weight:400">+${phoneCount} Tel.</span>`:String(sessCount);
+    // Nächster / letzter Termin
+    const next=pAppts.filter(a=>a.date>=todayStr()&&a.type!=='canceled').sort((a,b)=>a.date.localeCompare(b.date))[0];
+    const last=pAppts.filter(a=>apptHasPassed(a)&&SESSION_TYPES.has(a.type)).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const terminLabel=next
+      ? `Nächster: ${formatDate(next.date)} ${next.time}`
+      : last
+        ? `Zuletzt: ${formatDate(last.date)}`
+        : 'Kein Termin';
+    // ICD-Badges
+    const codes=(p.diagCodes||[]).map(x=>{
+      const sicherheit=x.sicherheit?` <span style="font-size:9px;font-weight:700;padding:0 3px;border-radius:2px;background:${x.sicherheit==='G'?'var(--teal-bg)':'var(--amber-bg)'};color:${x.sicherheit==='G'?'var(--teal-text)':'var(--amber-text)'}">${x.sicherheit}</span>`:'';
+      return`<span style="font-size:10px;background:var(--purple-bg);color:var(--purple-text);padding:1px 5px;border-radius:3px;font-weight:500">${esc(x.c)}${sicherheit}</span>`;
+    }).join(' ');
+    // Prozess-Badge
+    const processBadge=(()=>{
+      const ta=p.therapieantrag||{};
+      const probDone=pAppts.filter(a=>a.type==='probatorik'&&apptHasPassed(a)).length;
+      // In Therapie erkennbar aus letzten Terminen
+      const recentTypes=pAppts.filter(a=>SESSION_TYPES.has(a.type)&&a.type!=='probatorik'&&apptHasPassed(a)).map(a=>a.type);
+      const hasET=recentTypes.includes('et');
+      const hasGT=recentTypes.includes('gt');
+      const hasSelbst=recentTypes.includes('selbst')||recentTypes.includes('privat');
+      if(ta.kostenzusage&&ta.kostenzusage.done){
+        const form=hasGT?'Gruppentherapie':hasSelbst?'Selbstzahler':'Einzeltherapie';
+        return`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal-text)">${form}</span>`;
+      }
+      if(ta.konsiliBeantragt&&ta.konsiliBeantragt.done){
+        const step=ta.kostenzusage?.done?'Kostenzusage':ta.antragEingereicht?.done?'Antrag eingereicht':ta.antragAusgefuellt?.done?'Antrag i. Bearb.':ta.konsiliErstellt?.done?'Konsili erhalten':'Antrag läuft';
+        return`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--blue-bg,#e8f0fe);color:var(--blue)">${step}</span>`;
+      }
+      if(probDone>=5){
+        return`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--amber-bg);color:var(--amber-text)">Probatorik abgeschlossen</span>`;
+      }
+      if(probDone>0){
+        return`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--surface2);color:var(--text2)">Probatorik ${probDone}/5</span>`;
+      }
+      return'';
+    })();
+    return`<div class="patient-row" onclick="showPatient('${p.id}')">
+      <div class="av ${avColor(p.name)}">${avInitials(p.name)}</div>
+      <div class="patient-info">
+        <div class="patient-name">${esc(p.name)}</div>
+        <div class="patient-meta" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          ${processBadge}${codes}
+          <span style="color:var(--text3)">${terminLabel}</span>
+        </div>
+      </div>
+      <div class="patient-right">
+        <div class="pstat"><div class="pstat-val">${sessLabel}</div><div class="pstat-lbl">Sitzungen</div></div>
+        <span class="badge badge-${p.status||'active'}">${p.status==='pause'?'Pause':p.status==='done'?'Abgeschlossen':'Aktiv'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function filterPatients(v){
+  if(currentSubTab==='patienten-archiv') renderArchiv(v);
+  else renderPatients(v);
+}
+
+// ── Archiv ────────────────────────────────────────────────────────────────────
+function renderArchiv(filter=''){
+  const patients=loadPatients().filter(p=>p.status==='done');
+  const appts=loadAppts();
+  const fl=(filter||'').toLowerCase();
+  let fp=patients.filter(p=>{
+    if(!fl)return true;
+    if(p.name.toLowerCase().includes(fl))return true;
+    return(p.diagCodes||[]).some(x=>x.c.toLowerCase().includes(fl)||x.n.toLowerCase().includes(fl));
+  });
+  fp.sort((a,b)=>a.name.split(',')[0].trim().toLowerCase().localeCompare(b.name.split(',')[0].trim().toLowerCase(),'de'));
+  const list=document.getElementById('archiv-list');
+  if(!fp.length){
+    list.innerHTML=`<div class="empty">${patients.length?'Keine Treffer.':'Noch keine archivierten Patienten.'}</div>`;
+    return;
+  }
+  list.innerHTML=fp.map(p=>{
+    const pAppts=appts.filter(a=>a.patientId===p.id);
+    const sessCount=pAppts.filter(a=>SESSION_TYPES.has(a.type)&&apptHasPassed(a)).length;
+    const allDates=pAppts.filter(a=>SESSION_TYPES.has(a.type)).map(a=>a.date).sort();
+    const first=allDates[0], last=allDates[allDates.length-1];
+    const zeitraum=first&&last?`${formatDate(first)} – ${formatDate(last)}`:'–';
+    const codes=(p.diagCodes||[]).map(x=>{
+      const s=x.sicherheit||'V';
+      return`<span style="font-size:10px;background:var(--purple-bg);color:var(--purple-text);padding:1px 5px;border-radius:3px;font-weight:500">${esc(x.c)} <span style="font-size:9px;opacity:.7">${s}</span></span>`;
+    }).join(' ');
+    return`<div class="patient-row" onclick="showPatient('${p.id}')" style="opacity:.85">
+      <div class="av ${avColor(p.name)}" style="filter:grayscale(.6)">${avInitials(p.name)}</div>
+      <div class="patient-info">
+        <div class="patient-name" style="color:var(--text2)">${esc(p.name)}</div>
+        <div class="patient-meta" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          ${codes}
+          <span style="color:var(--text3)">${zeitraum}</span>
+        </div>
+      </div>
+      <div class="patient-right" style="gap:6px">
+        <div class="pstat"><div class="pstat-val">${sessCount}</div><div class="pstat-lbl">Sitzungen</div></div>
+        <button onclick="event.stopPropagation();reactivatePatient('${p.id}')" class="btn" style="font-size:11px;padding:4px 8px;color:var(--teal-text);border-color:var(--teal-text)">Reaktivieren</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function reactivatePatient(id){
+  if(!confirm('Patient reaktivieren und zurück in die aktive Liste verschieben?'))return;
+  const patients=loadPatients();
+  const p=patients.find(x=>x.id===id);
+  if(!p)return;
+  p.status='active';
+  savePatients(patients);
+  showToast('Patient reaktiviert.');
+  renderArchiv(document.getElementById('psearch').value);
+}
+
+function showPatient(id){
+  const p=loadPatients().find(x=>x.id===id);if(!p)return;
+  const appts=loadAppts().filter(a=>a.patientId===id).sort((a,b)=>b.date.localeCompare(a.date));
+  const sessCount=appts.filter(a=>SESSION_TYPES.has(a.type)&&apptHasPassed(a)).length;
+  const phoneCount=appts.filter(a=>a.type==='telefon'&&apptHasPassed(a)).length;
+  const next=appts.filter(a=>a.date>=todayStr()&&a.type!=='canceled'&&a.type!=='noshow').sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const codes=(p.diagCodes||[]).map(x=>{
+    const s=x.sicherheit||'V';
+    const sBg=s==='G'?'var(--teal-bg)':'var(--amber-bg)';
+    const sCol=s==='G'?'var(--teal-text)':'var(--amber-text)';
+    const sBorder=s==='G'?'var(--teal-text)':'var(--amber)';
+    return`<div style="margin-bottom:4px;display:flex;align-items:center;gap:6px"><span style="font-weight:600;color:var(--purple)">${esc(x.c)}</span><span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:3px;border:1px solid ${sBorder};background:${sBg};color:${sCol}">${s==='G'?'gesichert':'Verdacht'}</span><span style="font-size:13px;color:var(--text)">${esc(x.n)}</span></div>`;
+  }).join('');
+  const rows=appts.map(a=>`<div class="srow">
+    <span class="srow-date">${formatDate(a.date)}</span>
+    <span style="font-size:10px;color:var(--text2);width:45px;flex-shrink:0">${a.time||'–'}</span>
+    <span class="srow-type"><span class="appt-dot ${TYPE_COLOR[a.type]||'et'}">${TYPE_LABEL[a.type]||a.type}</span></span>
+    <span class="srow-dur">${a.dur} min</span>
+    ${a.note?`<span style="font-size:11px;color:var(--text3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a.note)}">${esc(a.note)}</span>`:''}
+  </div>`).join('');
+
+  // Probatorik progress: nur bereits stattgefundene Sitzungen (Datum <= heute) gelten
+  // als abgeschlossen; künftig gebuchte werden separat als "geplant" ausgewiesen.
+  const probAll=appts.filter(a=>a.type==='probatorik');
+  const probDone=probAll.filter(a=>apptHasPassed(a)).length;
+  const probPlanned=probAll.filter(a=>!apptHasPassed(a)).length;
+  const probDots=Array.from({length:5},(_,i)=>{
+    const done=i<probDone, planned=!done&&i<probDone+probPlanned;
+    const border=done?'var(--amber)':planned?'var(--amber)':'var(--border)';
+    const bg=done?'var(--amber-bg)':'transparent';
+    const color=done?'var(--amber-text)':planned?'var(--amber-text)':'var(--text3)';
+    const style=planned?'border-style:dashed':'';
+    return`<div title="${done?'stattgefunden':planned?'geplant':'frei'}" style="width:28px;height:28px;border-radius:50%;border:2px solid ${border};${style};background:${bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:${color}">${i+1}</div>`;
+  }).join('');
+  const probWarning = probDone>=5
+    ? `<div style="margin-top:10px;padding:8px 12px;background:var(--teal-bg);border:1px solid var(--teal-text);border-radius:var(--radius);font-size:12px;color:var(--teal-text);display:flex;align-items:center;gap:8px">✅ Alle 5 Probatorik-Sitzungen abgeschlossen.</div>`
+    : probDone===4
+    ? `<div style="margin-top:10px;padding:8px 12px;background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--radius);font-size:12px;color:var(--amber-text);display:flex;align-items:center;gap:8px">⚠️ <strong>Hinweis:</strong> Nächste Sitzung ist die letzte Probatorik-Sitzung (5/5). Bitte Therapieantrag vorbereiten.</div>`
+    : '';
+  const probSection=`<div class="drow" style="flex-direction:column;align-items:flex-start;gap:8px">
+    <span class="drow-lbl">Probatorik-Sitzungen</span>
+    <div style="display:flex;gap:6px;align-items:center">${probDots}<span style="font-size:12px;color:var(--text2);margin-left:4px">${probDone}/5${probPlanned>0?` · ${probPlanned} geplant`:''}</span></div>
+    ${probWarning}
+  </div>`;
+
+  // Therapieantrag-Checkliste
+  const ta=p.therapieantrag||{};
+  const probAuto=probDone>=5;
+  function taRowHTML(cfg){
+    const val=ta[cfg.key];
+    const done=cfg.auto?probAuto:!!(val&&val.done);
+    const date=val&&val.date?val.date:'';
+    const chkStyle=`width:16px;height:16px;accent-color:var(--teal);cursor:${cfg.auto?'default':'pointer'}`;
+    const dateInput=!cfg.auto
+      ?`<input type="date" value="${date}" id="ta-date-${cfg.key}" style="border:1px solid var(--border);border-radius:4px;font-size:11px;padding:2px 6px;color:var(--text);background:var(--surface);font-family:inherit"${done?'':' disabled'}>`
+      :(done?`<span style="font-size:11px;color:var(--teal-text)">&#10003; automatisch</span>`:'<span style="font-size:11px;color:var(--text3)">ausstehend</span>');
+    return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-2,#eee)">
+      <input type="checkbox" id="ta-chk-${cfg.key}"${done?' checked':''}${cfg.auto?' disabled':''} style="${chkStyle}">
+      <span style="flex:1;font-size:13px;color:${done?'var(--text)':'var(--text2)'}">${cfg.label}</span>
+      ${dateInput}
+    </div>`;
+  }
+  const therapieSection=`<div class="drow" style="flex-direction:column;align-items:flex-start;gap:4px">
+    <span class="drow-lbl" style="margin-bottom:4px">Therapieantrag-Prozess</span>
+    ${TA_KEYS.map(taRowHTML).join('')}
+  </div>`;
+
+  document.getElementById('detail-content').innerHTML=`
+    <div class="detail-card">
+      <div class="detail-header">
+        <div class="av ${avColor(p.name)}" style="width:44px;height:44px;font-size:14px">${avInitials(p.name)}</div>
+        <div style="flex:1"><div style="font-size:16px;font-weight:600;color:var(--text)">${esc(p.name)}</div><div style="font-size:13px;color:var(--text2)">${TYPE_LABEL[p.type]||'–'}</div></div>
+        <button class="btn" onclick="openEditPatient('${p.id}')">Bearbeiten</button>
+      </div>
+      <div>
+        <div class="drow"><span class="drow-lbl">Geburtsdatum</span><span class="drow-val">${formatDate(p.dob)}</span></div>
+        ${p.phone?`<div class="drow"><span class="drow-lbl">Telefon</span><span class="drow-val">${esc(p.phone)}</span></div>`:''}
+        ${p.email?`<div class="drow"><span class="drow-lbl">E-Mail</span><span class="drow-val">${esc(p.email)}</span></div>`:''}
+        <div class="drow"><span class="drow-lbl">Sitzungen gesamt</span><span class="drow-val">${sessCount}${phoneCount>0?` <span style="font-size:11px;color:var(--text3);font-weight:400">+ ${phoneCount} Telefonat${phoneCount!==1?'e':''}</span>`:''}</span></div>
+        <div class="drow"><span class="drow-lbl">Nächster Termin</span><span class="drow-val">${next?formatDate(next.date)+' '+next.time:'–'}</span></div>
+        <div class="drow"><span class="drow-lbl">Status</span><span class="drow-val"><span class="badge badge-${p.status||'active'}">${p.status==='pause'?'Pause':p.status==='done'?'Abgeschlossen':'Aktiv'}</span></span></div>
+        ${probSection}
+        ${therapieSection}
+        ${p.diagCodes&&p.diagCodes.length?`<div class="drow" style="flex-direction:column;align-items:flex-start;gap:6px"><span class="drow-lbl" style="margin-bottom:4px">Diagnosen (ICD-10)</span><div>${codes}</div></div>`:''}
+        ${p.notes?`<div class="drow" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="drow-lbl">Notizen</span><span style="font-size:13px;color:var(--text)">${esc(p.notes)}</span></div>`:''}
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title" style="margin:0">Termine (${appts.length})</div>
+      <button class="btn btn-primary" onclick="openNewApptPatient('${p.id}')">+ Termin</button>
+    </div>
+    ${appts.length?`<div class="detail-card">${rows}</div>`:`<div class="empty" style="padding:1rem">Noch keine Termine.</div>`}
+    <div style="margin-top:1rem;text-align:right"><button class="btn btn-danger" onclick="deletePatient('${p.id}')">Patient löschen</button></div>`;
+  // Attach event listeners for Therapieantrag checkboxes (Option B: no inline handlers)
+  TA_KEYS.filter(cfg=>!cfg.auto).forEach(cfg=>{
+    const chk=document.getElementById('ta-chk-'+cfg.key);
+    const dateEl=document.getElementById('ta-date-'+cfg.key);
+    if(!chk||!dateEl)return;
+    chk.addEventListener('change',()=>{
+      dateEl.disabled=!chk.checked;
+      if(chk.checked&&!dateEl.value){
+        dateEl.value=todayStr();
+      }
+      saveTA(p.id, cfg.key, chk.checked, dateEl.value);
+    });
+    dateEl.addEventListener('change',()=>{
+      saveTA(p.id, cfg.key, chk.checked, dateEl.value);
+    });
+  });
+  _detailBackTarget='patienten-liste';
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-detail').classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('patienten')"]`).classList.add('active');
+}
+function showPatients(){
+  _detailBackTarget='patienten-liste';
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-patienten').classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('patienten')"]`).classList.add('active');
+  switchSubTab('patienten-liste');
+}
+
+// ── Patient CRUD ──────────────────────────────────────────────────────────────
+function openNewPatient(){
+  document.getElementById('modal-patient-title').textContent='Neuer Patient';
+  ['pt-name','pt-dob','pt-phone','pt-email','pt-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pt-type').value='probatorik';
+  document.getElementById('pt-status').value='active';
+  document.getElementById('pt-edit-id').value='';
+  document.getElementById('pt-wl-source-id').value='';
+  document.getElementById('icd-search').value='';
+  loadICDsIntoForm([]);
+  document.getElementById('modal-patient').classList.remove('hidden');
+}
+function openEditPatient(id){
+  const p=loadPatients().find(x=>x.id===id);if(!p)return;
+  document.getElementById('modal-patient-title').textContent='Patient bearbeiten';
+  document.getElementById('pt-name').value=p.name||'';
+  document.getElementById('pt-dob').value=p.dob||'';
+  document.getElementById('pt-phone').value=p.phone||'';
+  document.getElementById('pt-email').value=p.email||'';
+  document.getElementById('pt-notes').value=p.notes||'';
+  document.getElementById('pt-type').value=p.type||'probatorik';
+  document.getElementById('pt-status').value=p.status||'active';
+  document.getElementById('pt-edit-id').value=id;
+  document.getElementById('pt-wl-source-id').value='';
+  document.getElementById('icd-search').value='';
+  loadICDsIntoForm(p.diagCodes||[]);
+  document.getElementById('modal-patient').classList.remove('hidden');
+}
+function savePatient(){
+  const name=document.getElementById('pt-name').value.trim();
+  if(!name){alert('Bitte Name eingeben.');return}
+  const dob=document.getElementById('pt-dob').value;
+  const patients=loadPatients();
+  const editId=document.getElementById('pt-edit-id').value;
+  const wlSourceId=document.getElementById('pt-wl-source-id').value;
+
+  // Duplicate check: same name (case-insensitive) + same dob
+  if(!editId){
+    const nameLower=name.toLowerCase().replace(/\s+/g,'');
+    const duplicate=patients.find(p=>{
+      const pName=p.name.toLowerCase().replace(/\s+/g,'');
+      const nameMatch=pName===nameLower||pName.includes(nameLower)||nameLower.includes(pName);
+      const dobMatch=dob&&p.dob&&p.dob===dob;
+      return nameMatch&&dobMatch;
+    });
+    if(duplicate){
+      if(!confirm(`⚠️ Mögliche Doppelaufnahme:\n\nEs existiert bereits ein Patient mit ähnlichem Namen und gleichem Geburtsdatum:\n"${duplicate.name}" (${formatDate(duplicate.dob)})\n\nTrotzdem speichern?`))return;
+    } else {
+      // Softer check: just name similarity without dob
+      const nameOnlyDup=dob?null:patients.find(p=>{
+        const pName=p.name.toLowerCase().replace(/\s+/g,'');
+        return pName===nameLower;
+      });
+      if(nameOnlyDup){
+        if(!confirm(`⚠️ Hinweis:\n\nEin Patient mit dem Namen "${nameOnlyDup.name}" existiert bereits.\n\nTrotzdem als neuen Patienten speichern?`))return;
+      }
+    }
+  }
+
+  const diagCodes=JSON.parse(document.getElementById('pt-diag-codes').value||'[]');
+  const data={name,dob,phone:document.getElementById('pt-phone').value.trim(),email:document.getElementById('pt-email').value.trim(),notes:document.getElementById('pt-notes').value.trim(),type:document.getElementById('pt-type').value,status:document.getElementById('pt-status').value,diagCodes};
+  const prevStatus=editId?(patients.find(x=>x.id===editId)||{}).status:null;
+  if(editId){const i=patients.findIndex(x=>x.id===editId);if(i>=0)patients[i]={...patients[i],...data}}
+  else patients.push({id:uid(),...data});
+  savePatients(patients);
+
+  // Remove from waitlist if converted
+  if(wlSourceId){
+    saveWaitlist(loadWaitlist().filter(x=>x.id!==wlSourceId));
+  }
+
+  closeModal('modal-patient');renderMetrics();
+  const nowDone=data.status==='done';
+  const justArchived=nowDone&&prevStatus!=='done';
+  if(editId)showPatient(editId);else renderPatients();
+  if(justArchived){
+    showToast('Patient abgeschlossen und ins Archiv verschoben.');
+  } else {
+    showToast(editId?'Patient aktualisiert.':`Patient gespeichert.${wlSourceId?' Aus Warteliste entfernt.':''}`);
+  }
+}
+function deletePatient(id){
+  if(!confirm('Patient und alle Termine wirklich löschen?'))return;
+  savePatients(loadPatients().filter(x=>x.id!==id));
+  saveAppts(loadAppts().filter(a=>a.patientId!==id));
+  showPatients();renderMetrics();showToast('Patient gelöscht.');
+}
+
+// ── Slot picker ───────────────────────────────────────────────────────────────
+const SLOTS_SINGLE=[{t:'09:00',d:60,l:'09:00 – 10:00'},{t:'10:00',d:60,l:'10:00 – 11:00'},{t:'11:00',d:60,l:'11:00 – 12:00'},{t:'13:00',d:60,l:'13:00 – 14:00'},{t:'14:00',d:60,l:'14:00 – 15:00'},{t:'15:00',d:60,l:'15:00 – 16:00'},{t:'16:00',d:60,l:'16:00 – 17:00'}];
+const SLOTS_GROUP=[{t:'09:00',d:120,l:'09:00 – 11:00'},{t:'15:00',d:120,l:'15:00 – 17:00'}];
+
+function updateSlots(selectedTime){
+  const type=document.getElementById('appt-type').value;
+  const slots=type==='gt'?SLOTS_GROUP:SLOTS_SINGLE;
+  const wrap=document.getElementById('slot-buttons');
+  const date=document.getElementById('appt-date').value;
+  const editId=document.getElementById('appt-edit-id').value;
+  const bookedAppts=loadAppts().filter(a=>a.date===date&&a.type!=='canceled'&&a.id!==editId);
+  const toMin=t=>parseInt(t.split(':')[0])*60+parseInt(t.split(':')[1]);
+  function overlaps(slotStart,slotDur){
+    const sStart=toMin(slotStart),sEnd=sStart+slotDur;
+    return bookedAppts.some(a=>{const bStart=toMin(a.time||'00:00'),bEnd=bStart+(a.dur||60);return sStart<bEnd&&sEnd>bStart;});
+  }
+  const curTime=selectedTime||document.getElementById('appt-time').value||'';
+  wrap.innerHTML=slots.map(s=>{
+    const active=s.t===curTime;
+    const blocked=overlaps(s.t,s.d);
+    if(blocked&&!active){
+      return`<button type="button" disabled title="Zeitraum bereits belegt" style="padding:7px 13px;font-size:13px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text3);cursor:not-allowed;font-family:inherit;text-decoration:line-through;opacity:.5">${s.l}</button>`;
+    }
+    return`<button type="button" onclick="selectSlot('${s.t}',${s.d})" style="padding:7px 13px;font-size:13px;border-radius:var(--radius);border:1px solid ${active?'var(--purple)':'var(--border)'};background:${active?'var(--purple-bg)':'var(--surface)'};color:${active?'var(--purple-text)':'var(--text)'};cursor:pointer;font-family:inherit;font-weight:${active?'600':'400'}">${s.l}</button>`;
+  }).join('');
+  if(!curTime){
+    const firstFree=slots.find(s=>!overlaps(s.t,s.d));
+    if(firstFree){
+      document.getElementById('appt-time').value=firstFree.t;
+      document.getElementById('appt-dur').value=firstFree.d;
+      updateSlots(firstFree.t);
+    }
+  }
+}
+
+function selectSlot(time,dur){
+  document.getElementById('appt-time').value=time;
+  document.getElementById('appt-dur').value=dur;
+  updateSlots(time);
+}
+
+// ── Appointment CRUD ──────────────────────────────────────────────────────────
+function populatePatientSelect(selectedId){
+  const sel=document.getElementById('appt-patient');
+  const patients=loadPatients().filter(p=>!p.status||p.status==='active');
+  sel.innerHTML='<option value="">– Patient wählen –</option>'+patients.map(p=>`<option value="${p.id}"${p.id===selectedId?' selected':''}>${esc(p.name)}</option>`).join('');
+  checkProbatorik(selectedId);
+}
+
+function checkProbatorik(patientId){
+  const opt=document.querySelector('#appt-type option[value="probatorik"]');
+  if(!opt)return;
+  if(!patientId){
+    opt.disabled=false;
+    opt.textContent='Probatorik';
+    return;
+  }
+  const count=loadAppts().filter(a=>a.patientId===patientId&&a.type==='probatorik').length;
+  if(count>=5){
+    opt.disabled=true;
+    opt.textContent='Probatorik (5/5 erreicht)';
+    // if probatorik is currently selected, switch to ET
+    if(document.getElementById('appt-type').value==='probatorik'){
+      document.getElementById('appt-type').value='et';
+      onApptTypeChange();
+    }
+  } else {
+    opt.disabled=false;
+    opt.textContent=`Probatorik (${count}/5)`;
+  }
+}
+
+function openNewAppt(){
+  document.getElementById('modal-appt-title').textContent='Neuer Termin';
+  populatePatientSelect('');
+  document.getElementById('appt-date').value=todayStr();
+  document.getElementById('appt-type').value='probatorik';
+  document.getElementById('appt-time').value='';
+  document.getElementById('appt-dur').value='';
+  document.getElementById('appt-note').value='';
+  document.getElementById('appt-edit-id').value='';
+  onApptTypeChange();
+  document.getElementById('modal-appt').classList.remove('hidden');
+}
+function openNewApptDate(date){openNewAppt();document.getElementById('appt-date').value=date}
+function openNewApptPatient(pid){
+  openNewAppt();
+  populatePatientSelect(pid);
+  // set smart default: probatorik if <5, else ET
+  const count=loadAppts().filter(a=>a.patientId===pid&&a.type==='probatorik').length;
+  document.getElementById('appt-type').value=count>=5?'et':'probatorik';
+  onApptTypeChange();
+}
+function editAppt(id){
+  const a=loadAppts().find(x=>x.id===id);if(!a)return;
+  document.getElementById('modal-appt-title').textContent='Termin bearbeiten';
+  populatePatientSelect(a.patientId);
+  document.getElementById('appt-date').value=a.date;
+  document.getElementById('appt-type').value=a.type;
+  document.getElementById('appt-time').value=a.time||'09:00';
+  document.getElementById('appt-dur').value=a.dur||60;
+  document.getElementById('appt-note').value=a.note||'';
+  document.getElementById('appt-edit-id').value=id;
+  if(a.type==='telefon'){
+    document.getElementById('appt-phone-time').value=a.time||'08:00';
+  }
+  onApptTypeChange();
+  if(a.type!=='telefon') updateSlots(a.time||'09:00');
+  document.getElementById('modal-appt').classList.remove('hidden');
+}
+function saveAppt(){
+  const type=document.getElementById('appt-type').value;
+  const date=document.getElementById('appt-date').value;
+  const time=document.getElementById('appt-time').value;
+  const dur=parseInt(document.getElementById('appt-dur').value);
+  const note=document.getElementById('appt-note').value.trim();
+  const editId=document.getElementById('appt-edit-id').value;
+  if(!date){alert('Bitte Datum wählen.');return}
+  if(!time){alert('Bitte einen Zeitslot wählen.');return}
+  const toMin=t=>parseInt(t.split(':')[0])*60+parseInt(t.split(':')[1]);
+  const sStart=toMin(time),sEnd=sStart+dur;
+  const appts=loadAppts();
+
+  if(type==='gt'){
+    // Group booking — create one appt per member
+    const groupId=document.getElementById('appt-group').value;
+    if(!groupId){alert('Bitte eine Gruppe wählen.');return}
+    const group=loadGroups().find(x=>x.id===groupId);
+    if(!group||(group.memberIds||[]).length===0){alert('Diese Gruppe hat keine Mitglieder.');return}
+    // Check slot not already taken
+    const conflict=appts.find(a=>{
+      if(a.date!==date||a.type==='canceled'||a.id===editId)return false;
+      const bStart=toMin(a.time||'00:00'),bEnd=bStart+(a.dur||60);
+      return sStart<bEnd&&sEnd>bStart;
+    });
+    if(conflict){alert('Dieser Zeitraum ist bereits belegt.');return}
+    const newAppts=group.memberIds.map(pid=>({id:uid(),patientId:pid,date,time,type,dur,note,groupId}));
+    saveAppts([...appts,...newAppts]);
+    closeModal('modal-appt');renderMetrics();
+    if(currentTab==='kalender')renderCal();
+    if(currentTab==='heute')renderHeute();
+    showToast(`${newAppts.length} Gruppentherapie-Termine gespeichert.`);
+  } else {
+    // Single patient booking
+    const patientId=document.getElementById('appt-patient').value;
+    if(!patientId){alert('Bitte Patient wählen.');return}
+    const conflict=type!=='telefon'&&appts.find(a=>{
+      if(a.date!==date||a.type==='canceled'||a.type==='telefon'||a.id===editId)return false;
+      const bStart=toMin(a.time||'00:00'),bEnd=bStart+(a.dur||60);
+      return sStart<bEnd&&sEnd>bStart;
+    });
+    if(conflict){alert('Dieser Zeitraum ist bereits belegt.');return}
+    const data={patientId,date,time,type,dur,note};
+    if(editId){const i=appts.findIndex(x=>x.id===editId);if(i>=0)appts[i]={...appts[i],...data}}
+    else appts.push({id:uid(),...data});
+    saveAppts(appts);closeModal('modal-appt');renderMetrics();
+    if(currentTab==='kalender')renderCal();
+    if(currentTab==='heute')renderHeute();
+    showToast(editId?'Termin aktualisiert.':'Termin gespeichert.');
+  }
+}
+function deleteAppt(id,dateKey){
+  if(!confirm('Termin löschen?'))return;
+  saveAppts(loadAppts().filter(x=>x.id!==id));
+  renderMetrics();
+  if(dateKey)showDay(dateKey);
+  showToast('Termin gelöscht.');
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function renderStats(){
+  const allAppts=loadAppts();
+  const appts=allAppts.filter(a=>a.type!=='canceled'&&a.type!=='noshow');
+  const types=[{k:'probatorik',n:'Probatorik',c:'#d97706'},{k:'et',n:'Einzeltherapie',c:'#1d4ed8'},{k:'gt',n:'Gruppentherapie',c:'#059669'},{k:'tss',n:'TSS',c:'#7c3aed'},{k:'selbst',n:'Selbstzahler',c:'#ea580c'},{k:'privat',n:'Privat',c:'#be185d'},{k:'telefon',n:'Telefontermin',c:'#0f766e'}];
+  const tC=types.map(t=>({...t,v:appts.filter(a=>a.type===t.k).length}));
+  const canceledCount=allAppts.filter(a=>a.type==='canceled'&&!a.rescheduled).length;
+  const rescheduledCount=allAppts.filter(a=>a.type==='canceled'&&a.rescheduled).length;
+  const noshowCount=allAppts.filter(a=>a.type==='noshow').length;
+  const maxT=Math.max(...tC.map(x=>x.v),canceledCount,rescheduledCount,noshowCount,1);
+  const monthData=[];
+  for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const y=d.getFullYear(),m=d.getMonth();monthData.push({label:MONTHS[m].slice(0,3),count:appts.filter(a=>{const[ay,am]=a.date.split('-');return parseInt(ay)===y&&parseInt(am)-1===m}).length})}
+  const maxM=Math.max(...monthData.map(x=>x.count),1);
+  const wdC=[0,0,0,0,0];
+  appts.forEach(a=>{const d=new Date(a.date);let dow=d.getDay();dow=dow===0?6:dow-1;if(dow<5)wdC[dow]++;});
+  const timeSlots=[{n:'08–10',h:[8,9]},{n:'10–12',h:[10,11]},{n:'12–14',h:[12,13]},{n:'14–16',h:[14,15]},{n:'16–18',h:[16,17]}];
+  const timC=timeSlots.map(s=>({...s,c:appts.filter(a=>{const h=parseInt((a.time||'00:00').split(':')[0]);return s.h.includes(h)}).length}));
+  const maxTi=Math.max(...timC.map(x=>x.c),1);
+
+  // Top diagnoses
+  const patients=loadPatients();
+  const diagCount={};
+  patients.forEach(p=>(p.diagCodes||[]).forEach(x=>{diagCount[x.c]=(diagCount[x.c]||{c:x.c,n:x.n,v:0});diagCount[x.c].v++}));
+  const topDiag=Object.values(diagCount).sort((a,b)=>b.v-a.v).slice(0,6);
+  const maxD=Math.max(...topDiag.map(x=>x.v),1);
+
+  document.getElementById('stats-content').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-title">Sitzungsarten</div>
+        ${tC.map(t=>`<div class="bar-row"><div class="bar-lbl">${t.n.slice(0,13)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(t.v/maxT*100)}%;background:${t.c}"></div></div><div class="bar-num">${t.v}</div></div>`).join('')}
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Ausfälle & Verlegungen</div>
+        <div class="bar-row"><div class="bar-lbl">Echter Ausfall</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(canceledCount/maxT*100)}%;background:#dc2626"></div></div><div class="bar-num">${canceledCount}</div></div>
+        <div class="bar-row"><div class="bar-lbl">No-Show</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(noshowCount/maxT*100)}%;background:#7f1d1d"></div></div><div class="bar-num">${noshowCount}</div></div>
+        <div class="bar-row"><div class="bar-lbl">Verlegt</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(rescheduledCount/maxT*100)}%;background:#9ca3af"></div></div><div class="bar-num">${rescheduledCount}</div></div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)">
+          Ausfallquote: <strong>${allAppts.length>0?Math.round((canceledCount+noshowCount)/allAppts.length*100):0}%</strong>
+          <span style="color:var(--text3);margin-left:8px">(nur echte Ausfälle + No-Shows)</span>
+        </div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-title">Sitzungen letzte 6 Monate</div>
+        ${monthData.map(m=>`<div class="bar-row"><div class="bar-lbl">${m.label}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(m.count/maxM*100)}%;background:#534AB7"></div></div><div class="bar-num">${m.count}</div></div>`).join('')}
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Sitzungen nach Wochentag</div>
+        <div class="week-row">${['Mo','Di','Mi','Do','Fr'].map((n,i)=>`<div class="wday"><div class="wday-name">${n}</div><div class="wday-num">${wdC[i]}</div></div>`).join('')}</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-title">Auslastung nach Uhrzeit</div>
+        ${timC.map(t=>`<div class="bar-row"><div class="bar-lbl">${t.n} Uhr</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(t.c/maxTi*100)}%;background:#378ADD"></div></div><div class="bar-num">${t.c}</div></div>`).join('')}
+      </div>
+      ${topDiag.length?`<div class="stat-card">
+        <div class="stat-card-title">Häufigste Diagnosen (ICD-10)</div>
+        ${topDiag.map(d=>`<div class="bar-row"><div class="bar-lbl" style="font-weight:600;color:var(--purple)">${d.c}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.v/maxD*100)}%;background:#534AB7"></div></div><div class="bar-num">${d.v}</div></div><div style="font-size:11px;color:var(--text3);margin:-3px 0 4px 103px">${d.n}</div>`).join('')}
+      </div>`:''}
+    </div>
+    ${renderWaitlistStats()}`;
+}
+
+function renderWaitlistStats(){
+  const wl=loadWaitlist();
+  if(!wl.length) return '';
+
+  const today=new Date();
+  const toMs=d=>new Date(d).getTime();
+  const daysWaiting=e=>e.date?Math.floor((today-new Date(e.date))/(86400000)):null;
+
+  // Status counts
+  const statusCounts=Object.keys(WL_STATUS).map(k=>({k,label:WL_STATUS[k].label,cls:WL_STATUS[k].cls,v:wl.filter(e=>e.status===k).length}));
+  const maxSC=Math.max(...statusCounts.map(x=>x.v),1);
+
+  // Avg wait for all active (not declined)
+  const active=wl.filter(e=>e.status!=='declined');
+  const allDays=active.map(daysWaiting).filter(d=>d!==null);
+  const avgWait=allDays.length?Math.round(allDays.reduce((a,b)=>a+b,0)/allDays.length):0;
+
+  // Avg wait until first contact (contacted or further)
+  const contacted=wl.filter(e=>['contacted','no_reply','scheduled'].includes(e.status)&&e.date&&e.lastContact);
+  const contactDays=contacted.map(e=>Math.floor((toMs(e.lastContact)-toMs(e.date))/86400000)).filter(d=>d>=0);
+  const avgContact=contactDays.length?Math.round(contactDays.reduce((a,b)=>a+b,0)/contactDays.length):null;
+
+  // Longest waiting uncontacted
+  const uncontacted=wl.filter(e=>e.status==='new'&&e.date);
+  uncontacted.sort((a,b)=>a.date.localeCompare(b.date));
+  const longest=uncontacted[0];
+  const longestDays=longest?daysWaiting(longest):null;
+
+  // Conversion rate: scheduled / total
+  const scheduled=wl.filter(e=>e.status==='scheduled').length;
+  const convRate=wl.length?Math.round(scheduled/wl.length*100):0;
+
+  // Priority breakdown
+  const hiPrio=wl.filter(e=>e.priority==='high'&&e.status==='new').length;
+
+  // Kontaktweg (Erstkontakt) aufschlüsseln
+  const cmCounts=Object.keys(WL_CONTACT).map(k=>({k,label:WL_CONTACT[k].label,icon:WL_CONTACT[k].icon,v:wl.filter(e=>e.contactMethod===k).length})).filter(x=>x.v>0);
+  const cmNone=wl.filter(e=>!e.contactMethod).length;
+
+  return`
+  <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:16px;margin-bottom:8px">
+    <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:12px">Warteliste</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-title">Status-Übersicht</div>
+        ${statusCounts.filter(s=>s.v>0).map(s=>`
+          <div class="bar-row">
+            <div class="bar-lbl" style="width:130px;text-align:right;font-size:11px">${s.label}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(s.v/maxSC*100)}%;background:var(--purple)"></div></div>
+            <div class="bar-num">${s.v}</div>
+          </div>`).join('')}
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)">
+          Gesamt: <strong>${wl.length}</strong> &nbsp;·&nbsp; Aktiv: <strong>${active.length}</strong>
+          ${hiPrio>0?`&nbsp;·&nbsp; <span style="color:var(--red-text)">⬆ ${hiPrio} hohe Priorität noch nicht kontaktiert</span>`:''}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Wartezeiten</div>
+        <div class="drow"><span class="drow-lbl">Ø Wartezeit (aktiv)</span><span class="drow-val">${waitLabel(avgWait)}</span></div>
+        <div class="drow"><span class="drow-lbl">Ø Zeit bis Kontakt</span><span class="drow-val">${avgContact!==null?waitLabel(avgContact):'–'}</span></div>
+        <div class="drow"><span class="drow-lbl">Terminvereinbarungsrate</span><span class="drow-val">${convRate}% (${scheduled}/${wl.length})</span></div>
+        ${longest?`<div class="drow"><span class="drow-lbl">Längste Wartezeit</span><span class="drow-val" style="color:${longestDays>90?'var(--amber-text)':'var(--text)'}"><strong>${esc(longest.name.split(' ')[0])}</strong> · ${waitLabel(longestDays)}</span></div>`:''}
+      </div>
+      ${cmCounts.length?`<div class="stat-card">
+        <div class="stat-card-title">Kontaktweg (Erstkontakt)</div>
+        ${cmCounts.map(c=>`<div class="drow"><span class="drow-lbl">${c.icon} ${c.label}</span><span class="drow-val">${c.v}</span></div>`).join('')}
+        ${cmNone?`<div class="drow"><span class="drow-lbl" style="color:var(--text3)">keine Angabe</span><span class="drow-val" style="color:var(--text3)">${cmNone}</span></div>`:''}
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+// ── Warteliste ────────────────────────────────────────────────────────────────
+const WL_STATUS={
+  new:{label:'Noch nicht kontaktiert',cls:'badge-wl-new'},
+  contacted:{label:'Kontaktiert',cls:'badge-wl-contacted'},
+  no_reply:{label:'Keine Antwort',cls:'badge-wl-no_reply'},
+  scheduled:{label:'Termin vereinbart',cls:'badge-wl-scheduled'},
+  declined:{label:'Abgesagt',cls:'badge-wl-declined'},
+};
+const WL_CONTACT={
+  phone:{label:'Telefon',icon:'📞'},
+  email:{label:'E-Mail',icon:'✉'},
+  inperson:{label:'Persönlich',icon:'🤝'},
+  other:{label:'Sonstige',icon:'•'},
+};
+
+function waitDays(dateStr){
+  if(!dateStr)return null;
+  const diff=Math.floor((new Date()-new Date(dateStr))/(1000*60*60*24));
+  return diff;
+}
+function waitLabel(days){
+  if(days===null)return'–';
+  if(days<7)return`${days} Tage`;
+  if(days<30)return`${Math.floor(days/7)} Woche${Math.floor(days/7)!==1?'n':''}`;
+  if(days<365)return`${Math.floor(days/30)} Monat${Math.floor(days/30)!==1?'e':''}`;
+  const y=Math.floor(days/365), m=Math.floor((days%365)/30);
+  return`${y} Jahr${y!==1?'e':''}${m>0?` ${m} Mon.`:''}`;
+}
+
+function saveWLSort(v){localStorage.setItem('wlSort',v);}
+function loadWLSort(){return localStorage.getItem('wlSort')||'prio_wartezeit';}
+function renderWaitlist(filter='', statusFilter=''){
+  const entries=loadWaitlist();
+  const sf=statusFilter||document.getElementById('wl-filter-status')?.value||'';
+  const fl=filter.toLowerCase();
+  const sort=loadWLSort();
+  const sel=document.getElementById('wl-sort');
+  if(sel&&sel.value!==sort)sel.value=sort;
+
+  let filtered=entries;
+  if(sf) filtered=filtered.filter(e=>e.status===sf);
+  if(fl) filtered=filtered.filter(e=>e.name.toLowerCase().includes(fl)||(e.phone||'').includes(fl)||(e.complaint||'').toLowerCase().includes(fl));
+
+  const STATUS_ORDER={new:0,contacted:1,no_reply:2,scheduled:3,declined:4};
+  const PRIO_ORDER={high:0,normal:1,low:2};
+
+  if(sort==='prio_wartezeit'){
+    filtered.sort((a,b)=>{
+      const pd=PRIO_ORDER[a.priority||'normal']-PRIO_ORDER[b.priority||'normal'];
+      if(pd!==0)return pd;
+      return (a.date||'').localeCompare(b.date||'');
+    });
+  } else if(sort==='wartezeit'){
+    filtered.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  } else if(sort==='name'){
+    filtered.sort((a,b)=>a.name.split(',')[0].trim().toLowerCase().localeCompare(b.name.split(',')[0].trim().toLowerCase(),'de'));
+  } else if(sort==='letzter_kontakt'){
+    filtered.sort((a,b)=>{
+      if(!a.lastContact&&!b.lastContact)return 0;
+      if(!a.lastContact)return 1;
+      if(!b.lastContact)return -1;
+      return b.lastContact.localeCompare(a.lastContact);
+    });
+  } else if(sort==='status'){
+    filtered.sort((a,b)=>{
+      const sd=STATUS_ORDER[a.status||'new']-STATUS_ORDER[b.status||'new'];
+      if(sd!==0)return sd;
+      return (a.date||'').localeCompare(b.date||'');
+    });
+  }
+
+  // Summary bar
+  const counts={};
+  Object.keys(WL_STATUS).forEach(k=>{counts[k]=entries.filter(e=>e.status===k).length});
+  const summaryEl=document.getElementById('wl-summary');
+  if(summaryEl) summaryEl.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px">
+    ${Object.entries(WL_STATUS).map(([k,v])=>counts[k]>0?`<span class="badge ${v.cls}" style="cursor:pointer" onclick="document.getElementById('wl-filter-status').value='${k}';renderWaitlist(document.getElementById('wl-search').value,'${k}')">${v.label}: ${counts[k]}</span>`:'').filter(Boolean).join('')}
+    <span style="color:var(--text3)">Gesamt: ${entries.length}</span>
+  </div>`;
+
+  const el=document.getElementById('waitlist-entries');
+  if(!el)return;
+  if(!filtered.length){
+    el.innerHTML=`<div class="empty">${entries.length?'Keine Einträge für diesen Filter.':'Noch keine Einträge. Klicke auf "+ Eintrag".'}</div>`;
+    return;
+  }
+
+  el.innerHTML=filtered.map(e=>{
+    const days=waitDays(e.date);
+    const st=WL_STATUS[e.status||'new'];
+    const isLong=days!==null&&days>90;
+    const prio=e.priority||'normal';
+    const cm=e.contactMethod&&WL_CONTACT[e.contactMethod]?WL_CONTACT[e.contactMethod]:null;
+    return`<div onclick="editWaitlistEntry('${e.id}')" title="Zum Bearbeiten klicken" style="cursor:pointer;background:var(--surface);border:1px solid ${isLong&&e.status==='new'?'var(--amber)':'var(--border)'};border-radius:var(--radius);padding:12px 14px;margin-bottom:6px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:14px;font-weight:500;color:var(--text)">${esc(e.name)}</span>
+            ${prio==='high'?`<span class="badge-prio-high">⬆ Hoch</span>`:''}
+            ${prio==='low'?`<span class="badge-prio-low">⬇ Niedrig</span>`:''}
+            <span class="badge ${st.cls}">${st.label}</span>
+            ${isLong&&e.status==='new'?`<span style="font-size:11px;color:var(--amber-text);background:var(--amber-bg);padding:1px 6px;border-radius:3px">⚠ Lange Wartezeit</span>`:''}
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text2)">
+            ${e.phone?`<span>📞 ${esc(e.phone)}</span>`:''}
+            ${e.email?`<span>✉ ${esc(e.email)}</span>`:''}
+            <span>📅 Seit ${formatDate(e.date)} <strong style="color:var(--text)">(${waitLabel(days)})</strong></span>
+            ${e.lastContact?`<span>Letzter Kontakt: ${formatDate(e.lastContact)}</span>`:''}
+            ${cm?`<span>${cm.icon} Erstkontakt: ${cm.label}</span>`:''}
+          </div>
+          ${e.complaint?`<div style="margin-top:5px;font-size:12px;color:var(--text2)">${esc(e.complaint)}</div>`:''}
+          ${e.notes?`<div style="margin-top:3px;font-size:11px;color:var(--text3);font-style:italic">${esc(e.notes)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+          ${e.status!=='scheduled'&&e.status!=='declined'?`<button onclick="event.stopPropagation();quickStatusWL('${e.id}')" style="background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;padding:3px 8px;color:var(--text2);font-family:inherit;white-space:nowrap">Status ↓</button>`:''}
+          ${e.status==='scheduled'?`<button onclick="event.stopPropagation();convertToPatient('${e.id}')" style="background:var(--teal-bg);border:1px solid var(--teal-text);border-radius:5px;cursor:pointer;font-size:11px;padding:3px 8px;color:var(--teal-text);font-family:inherit;white-space:nowrap">→ Als Patient</button>`:''}
+          <button onclick="event.stopPropagation();editWaitlistEntry('${e.id}')" title="Bearbeiten" style="background:none;border:none;cursor:pointer;font-size:13px;padding:4px;color:var(--text2)">✏️</button>
+          <button onclick="event.stopPropagation();deleteWaitlistEntry('${e.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:4px;color:var(--red-text)">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterWaitlist(v){renderWaitlist(v);}
+
+function quickStatusWL(id){
+  const entries=loadWaitlist();
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  const order=['new','contacted','no_reply','scheduled','declined'];
+  const next=order[Math.min(order.indexOf(e.status||'new')+1,order.length-1)];
+  const label=WL_STATUS[next].label;
+  if(!confirm(`Status ändern zu: "${label}"?`))return;
+  e.status=next;
+  if(next==='contacted'||next==='no_reply') e.lastContact=todayStr();
+  saveWaitlist(entries);renderWaitlist();showToast(`Status: ${label}`);
+}
+
+function convertToPatient(id){
+  const e=loadWaitlist().find(x=>x.id===id);if(!e)return;
+  if(!confirm(`"${e.name}" als Patient übernehmen?`))return;
+  openNewPatient();
+  document.getElementById('modal-patient-title').textContent='Patient aus Warteliste übernehmen';
+  document.getElementById('pt-name').value=e.name;
+  document.getElementById('pt-phone').value=e.phone||'';
+  document.getElementById('pt-email').value=e.email||'';
+  document.getElementById('pt-notes').value=[e.complaint,e.notes].filter(Boolean).join('\n');
+  // store waitlist ID so savePatient can remove the entry after saving
+  document.getElementById('pt-wl-source-id').value=id;
+  document.getElementById('modal-patient').classList.remove('hidden');
+  showToast('Daten übernommen — bitte ergänzen und speichern.');
+}
+
+function openNewWaitlistEntry(){
+  document.getElementById('modal-wl-title').textContent='Neuer Wartelisten-Eintrag';
+  ['wl-name','wl-phone','wl-email','wl-complaint','wl-notes','wl-last-contact'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('wl-date').value=todayStr();
+  document.getElementById('wl-status').value='new';
+  document.getElementById('wl-priority').value='normal';
+  document.getElementById('wl-contact-method').value='';
+  document.getElementById('wl-edit-id').value='';
+  document.getElementById('modal-wl').classList.remove('hidden');
+}
+
+function editWaitlistEntry(id){
+  const e=loadWaitlist().find(x=>x.id===id);if(!e)return;
+  document.getElementById('modal-wl-title').textContent='Eintrag bearbeiten';
+  document.getElementById('wl-name').value=e.name||'';
+  document.getElementById('wl-phone').value=e.phone||'';
+  document.getElementById('wl-email').value=e.email||'';
+  document.getElementById('wl-date').value=e.date||todayStr();
+  document.getElementById('wl-status').value=e.status||'new';
+  document.getElementById('wl-priority').value=e.priority||'normal';
+  document.getElementById('wl-contact-method').value=e.contactMethod||'';
+  document.getElementById('wl-last-contact').value=e.lastContact||'';
+  document.getElementById('wl-complaint').value=e.complaint||'';
+  document.getElementById('wl-notes').value=e.notes||'';
+  document.getElementById('wl-edit-id').value=id;
+  document.getElementById('modal-wl').classList.remove('hidden');
+}
+
+function saveWaitlistEntry(){
+  const name=document.getElementById('wl-name').value.trim();
+  if(!name){alert('Bitte Name eingeben.');return;}
+  const entries=loadWaitlist();
+  const editId=document.getElementById('wl-edit-id').value;
+  const data={
+    name,
+    phone:document.getElementById('wl-phone').value.trim(),
+    email:document.getElementById('wl-email').value.trim(),
+    date:document.getElementById('wl-date').value,
+    status:document.getElementById('wl-status').value,
+    priority:document.getElementById('wl-priority').value,
+    contactMethod:document.getElementById('wl-contact-method').value,
+    lastContact:document.getElementById('wl-last-contact').value,
+    complaint:document.getElementById('wl-complaint').value.trim(),
+    notes:document.getElementById('wl-notes').value.trim(),
+  };
+  if(editId){const i=entries.findIndex(x=>x.id===editId);if(i>=0)entries[i]={...entries[i],...data};}
+  else entries.push({id:uid(),...data});
+  saveWaitlist(entries);closeModal('modal-wl');renderWaitlist();
+  showToast(editId?'Eintrag aktualisiert.':'Eintrag gespeichert.');
+}
+
+function deleteWaitlistEntry(id){
+  if(!confirm('Eintrag löschen?'))return;
+  saveWaitlist(loadWaitlist().filter(x=>x.id!==id));
+  renderWaitlist();showToast('Eintrag gelöscht.');
+}
+
+// ── Export / Import ───────────────────────────────────────────────────────────
+function exportData(){
+  const data={
+    version:1,
+    exportedAt:new Date().toISOString(),
+    patients:loadPatients(),
+    appts:loadAppts(),
+    groups:loadGroups(),
+    waitlist:loadWaitlist(),
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const date=new Date().toISOString().slice(0,10);
+  a.href=url;a.download=`terminkalender-backup-${date}.json`;
+  a.click();URL.revokeObjectURL(url);
+  showToast('Backup gespeichert.');
+}
+
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data||typeof data!=='object'||!data.version||!Array.isArray(data.patients)||!Array.isArray(data.appts)){
+        alert('Ungültige Backup-Datei.');input.value='';return;
+      }
+      const groups=Array.isArray(data.groups)?data.groups:[];
+      const waitlist=Array.isArray(data.waitlist)?data.waitlist:[];
+      const count=data.patients.length;
+      const apptCount=data.appts.length;
+      if(!confirm(`Backup vom ${formatDate(data.exportedAt?.slice(0,10))} laden?\n\n${count} Patienten, ${apptCount} Termine, ${waitlist.length} Wartelisten-Einträge\n\n⚠️ Bestehende Daten werden überschrieben.`)){
+        input.value='';return;
+      }
+      savePatients(data.patients);
+      saveAppts(data.appts);
+      saveGroups(groups);
+      saveWaitlist(waitlist);
+      input.value='';
+      renderMetrics();
+      if(currentTab==='kalender')renderCal();
+      if(currentTab==='heute')renderHeute();
+      if(currentTab==='patienten'){renderPatients();renderGroups();}
+      if(currentTab==='warteliste')renderWaitlist();
+      if(currentTab==='statistik')renderStats();
+      showToast(`Backup geladen: ${count} Patienten, ${apptCount} Termine.`);
+    }catch(err){
+      alert('Fehler beim Lesen der Datei. Bitte eine gültige Backup-Datei wählen.');
+      input.value='';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function closeModal(id){document.getElementById(id).classList.add('hidden')}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.add('hidden')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hidden'))});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+// Erst Daten aus IndexedDB laden (inkl. einmaliger localStorage-Migration), dann rendern.
+loadDB().then(()=>{
+  renderMetrics();
+  switchTab('heute');
+  const sel=document.getElementById('patient-sort');
+  if(sel)sel.value=loadPatientSort();
+  const wlSel=document.getElementById('wl-sort');
+  if(wlSel)wlSel.value=loadWLSort();
+});
+
+// ── Therapieantrag save ───────────────────────────────────────────────────────
+function saveTA(patientId, key, done, date){
+  const patients=loadPatients();
+  const p=patients.find(x=>x.id===patientId);
+  if(!p)return;
+  if(!p.therapieantrag)p.therapieantrag={};
+  p.therapieantrag[key]={done:!!done, date:date||null};
+  savePatients(patients);
+  showToast('Gespeichert.');
+}
+
+// ── Patient context menu ──────────────────────────────────────────────────────
+function showPatientCtxMenu(e, patientId, apptId){
+  e.stopPropagation();
+  hidePatientCtxMenu();
+  const menu=document.createElement('div');
+  menu.id='patient-ctx-menu';
+  menu.style.cssText=`position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:160px;overflow:hidden`;
+  menu.innerHTML=`
+    <div onclick="showPatient('${patientId}');hidePatientCtxMenu()" style="padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
+      <span>👤</span><span>Zur Akte</span>
+    </div>
+    <div onclick="editAppt('${apptId}');hidePatientCtxMenu()" style="padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px">
+      <span>✏️</span><span>Termin bearbeiten</span>
+    </div>`;
+  menu.querySelectorAll('div').forEach(d=>{
+    d.addEventListener('mouseenter',()=>d.style.background='var(--surface2)');
+    d.addEventListener('mouseleave',()=>d.style.background='');
+  });
+  // Position near click
+  const x=Math.min(e.clientX, window.innerWidth-180);
+  const y=Math.min(e.clientY+4, window.innerHeight-100);
+  menu.style.left=x+'px';
+  menu.style.top=y+'px';
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',hidePatientCtxMenu,{once:true}),0);
+}
+function hidePatientCtxMenu(){
+  const m=document.getElementById('patient-ctx-menu');
+  if(m)m.remove();
+}
+</script>
+</body>
+</html>
