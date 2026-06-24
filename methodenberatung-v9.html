@@ -1,0 +1,2295 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Methodenberatung (v8.2)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#F6F5F1;
+  --s0:#FFFFFF;
+  --s1:#EEECEA;
+  --s2:#E4E2DE;
+  --b1:#DDDBD6;
+  --b2:#C4C2BC;
+  --t1:#1A1916;
+  --t2:#6C6A64;
+  --t3:#AAA89F;
+  --blue:#2F68B0;
+  --blue-bg:#E8F0FB;
+  --blue-mid:#C5D8F5;
+  --green:#1B7A4E;
+  --green-bg:#E5F4EC;
+  --amber:#9A5B10;
+  --amber-bg:#FBF0E0;
+  --red:#9B2828;
+  --red-bg:#FBEAEA;
+  --purple:#5A44B0;
+  --purple-bg:#EDEBFC;
+  --teal:#1A7A72;
+  --teal-bg:#E4F5F3;
+  --r:6px; --rl:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.07);
+}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--t1);min-height:100vh;font-size:14px;line-height:1.5
+}
+
+/* ── Shell ── */
+.topbar{
+  background:var(--s0);border-bottom:1px solid var(--b1);
+  padding:0 1.5rem;height:50px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:60;gap:10px
+}
+.brand{font-size:14px;font-weight:600;letter-spacing:-.2px;white-space:nowrap}
+.brand em{font-style:normal;color:var(--blue)}
+.nav{display:flex;gap:1px;background:var(--s1);border-radius:var(--r);padding:2px;border:1px solid var(--b1)}
+.nav-btn{padding:5px 13px;font-size:12px;font-weight:500;border:none;background:transparent;
+         border-radius:4px;cursor:pointer;color:var(--t2);font-family:inherit;
+         transition:color .12s,background .12s;white-space:nowrap}
+.nav-btn:hover{color:var(--t1)}
+.nav-btn.active{background:var(--s0);color:var(--t1);box-shadow:var(--shadow);border:1px solid var(--b1)}
+.topbar-right{display:flex;gap:6px;flex-shrink:0}
+.main{max-width:940px;margin:0 auto;padding:1.5rem 1.25rem}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 13px;
+  border:1px solid var(--b1);background:var(--s0);border-radius:var(--r);
+  font-size:13px;font-weight:500;color:var(--t1);cursor:pointer;
+  font-family:inherit;transition:background .12s,border-color .12s;white-space:nowrap
+}
+.btn:hover{background:var(--s1);border-color:var(--b2)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{opacity:.87;background:var(--blue)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--t2);padding:4px 8px}
+.btn-ghost:hover{background:var(--s1);color:var(--t1);border-color:var(--b1)}
+.btn-danger{background:var(--red-bg);color:var(--red);border-color:transparent}
+.btn-danger:hover{border-color:var(--red)}
+
+/* ── Panels ── */
+.panel{display:none}.panel.active{display:block}
+
+/* ── Metrics ── */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.5rem}
+.metric{background:var(--s0);border:1px solid var(--b1);border-radius:var(--rl);padding:14px 16px}
+.metric-val{font-size:26px;font-weight:700;color:var(--t1);line-height:1}
+.metric-label{font-size:11px;color:var(--t2);margin-top:5px;text-transform:uppercase;letter-spacing:.4px}
+.metric-sub{font-size:11px;color:var(--t3);margin-top:2px}
+
+/* ── Section headers ── */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px}
+
+/* ── Dashboard two-col ── */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:680px){.dash-grid{grid-template-columns:1fr}}
+
+/* ── Card / Row items ── */
+.card{background:var(--s0);border:1px solid var(--b1);border-radius:var(--rl);padding:.9rem 1rem;box-shadow:var(--shadow)}
+.row-item{
+  display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:var(--r);
+  border:1px solid var(--b1);margin-bottom:5px;cursor:pointer;background:var(--s0);
+  transition:border-color .12s,background .12s;box-shadow:var(--shadow)
+}
+.row-item:hover{border-color:var(--b2);background:var(--s1)}
+.row-body{flex:1;min-width:0}
+.row-name{font-size:13px;font-weight:600;color:var(--t1)}
+.row-title{font-size:12px;color:var(--t2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-meta{font-size:11px;color:var(--t3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row-aside{display:flex;align-items:center;gap:7px;flex-shrink:0}
+
+/* ── Timeline (Heute + Dashboard) ── */
+.tl-wrap{display:flex;flex-direction:column;gap:5px}
+.tl-item{display:flex;gap:10px;align-items:stretch}
+.tl-time{width:50px;flex-shrink:0;text-align:right;padding-top:4px}
+.tl-time-h{font-size:12px;font-weight:600;color:var(--t2)}
+.tl-time-end{font-size:10px;color:var(--t3)}
+.tl-bar{width:3px;border-radius:2px;flex-shrink:0;background:var(--b2)}
+.tl-bar.blue{background:var(--blue)}
+.tl-bar.green{background:var(--green)}
+.tl-bar.red{background:var(--red)}
+.tl-bar.gray{background:var(--b2)}
+.tl-card{
+  flex:1;background:var(--s0);border:1px solid var(--b1);border-radius:var(--r);
+  padding:8px 11px;cursor:pointer;transition:border-color .12s,background .12s
+}
+.tl-card:hover{border-color:var(--b2);background:var(--s1)}
+.tl-card-name{font-size:13px;font-weight:500;color:var(--t1)}
+.tl-card-meta{font-size:11px;color:var(--t2);margin-top:2px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+
+/* Quick-note inline after marking done */
+.quick-note-bar{display:flex;gap:6px;margin-top:6px}
+.quick-note-bar textarea{
+  flex:1;padding:5px 8px;border:1px solid var(--b1);border-radius:var(--r);
+  font-size:12px;background:var(--bg);color:var(--t1);font-family:inherit;
+  outline:none;resize:none;line-height:1.4;max-height:80px
+}
+.quick-note-bar textarea:focus{border-color:var(--blue)}
+.quick-note-dur{display:flex;align-items:center;gap:8px;margin-top:6px}
+.quick-note-dur label{font-size:11px;color:var(--t2)}
+.quick-note-dur input{width:80px;padding:4px 7px;border:1px solid var(--b1);border-radius:var(--r);
+  font-size:12px;background:var(--bg);color:var(--t1);font-family:inherit;outline:none}
+.quick-note-dur input:focus{border-color:var(--blue)}
+
+/* ── Deadline banner ── */
+.dl-banner{
+  background:var(--amber-bg);border:1px solid #E8C87A;border-radius:var(--r);
+  padding:7px 12px;margin-bottom:5px;display:flex;align-items:center;
+  justify-content:space-between;font-size:12px;cursor:pointer;
+  transition:background .12s
+}
+.dl-banner:hover{background:#F5E8C0}
+.dl-banner strong{color:var(--amber)}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:500;white-space:nowrap;line-height:1.5}
+.s-neu{background:var(--s2);color:var(--t2)}
+.s-angefragt{background:var(--amber-bg);color:var(--amber)}
+.s-terminiert{background:var(--blue-bg);color:var(--blue)}
+.s-laufend{background:var(--green-bg);color:var(--green)}
+.s-wartet{background:var(--purple-bg);color:var(--purple)}
+.s-abgeschlossen{background:var(--s1);color:var(--t3)}
+.p-hoch{background:var(--red-bg);color:var(--red);font-size:10px}
+.f-online{background:var(--blue-bg);color:var(--blue)}
+.f-praesent{background:var(--green-bg);color:var(--green)}
+.f-telefonisch{background:var(--amber-bg);color:var(--amber)}
+.a-geplant{background:var(--blue-bg);color:var(--blue)}
+.a-erledigt{background:var(--green-bg);color:var(--green)}
+.a-abgesagt{background:var(--red-bg);color:var(--red)}
+
+/* ── Qual / Quant ── */
+.qq-quant{background:#E8F0FB;color:#1A4F9A;font-weight:600;border:1px solid #C5D8F5}
+.qq-quali{background:#F0EBFC;color:#4A2FA0;font-weight:600;border:1px solid #D5C8F5}
+.qq-gemischt{background:#FBF0E0;color:#7A4010;font-weight:600;border:1px solid #F0D4A0}
+
+/* ── Statistik ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:1.25rem}
+.stat-card{background:var(--s0);border:1px solid var(--b1);border-radius:var(--rl);padding:.9rem 1rem;box-shadow:var(--shadow)}
+.stat-card-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bar-lbl{font-size:12px;color:var(--t2);width:120px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:14px;background:var(--s2);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.bar-num{font-size:12px;color:var(--t2);width:24px;text-align:right;flex-shrink:0}
+.stat-big{font-size:28px;font-weight:700;color:var(--t1);line-height:1}
+.stat-sub{font-size:12px;color:var(--t2);margin-top:4px}
+.rep-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--b1);font-size:13px}
+.rep-row:last-child{border-bottom:none}
+
+/* ── Search + filter ── */
+.toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.search-inp{
+  flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--b1);border-radius:var(--r);
+  font-size:13px;background:var(--s0);color:var(--t1);font-family:inherit;outline:none
+}
+.search-inp:focus{border-color:var(--blue)}
+.filter-sel{
+  padding:7px 10px;border:1px solid var(--b1);border-radius:var(--r);
+  font-size:12px;background:var(--s0);color:var(--t1);font-family:inherit;outline:none;cursor:pointer
+}
+.filter-sel:focus{border-color:var(--blue)}
+
+/* ── Kalender ── */
+.cal-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cal-title{font-size:15px;font-weight:600;color:var(--t1);flex:1;text-align:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-hdr{text-align:center;font-size:10px;color:var(--t3);padding:4px 0;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.cal-day{
+  min-height:66px;border-radius:var(--r);border:1px solid var(--b1);padding:5px;
+  background:var(--s0);cursor:pointer;transition:border-color .12s
+}
+.cal-day:hover{border-color:var(--b2)}
+.cal-day.other-month{opacity:.28;pointer-events:none}
+.cal-day.today{border-color:var(--blue);border-width:2px}
+.cal-day-num{font-size:11px;font-weight:500;color:var(--t2)}
+.cal-day.today .cal-day-num{color:var(--blue);font-weight:700}
+.cal-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin:1px}
+
+/* ── Detail ── */
+.back-btn{
+  display:inline-flex;align-items:center;gap:4px;background:none;border:none;
+  cursor:pointer;color:var(--blue);font-size:13px;padding:0 0 1rem;font-family:inherit
+}
+.detail-layout{display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:start}
+@media(max-width:720px){.detail-layout{grid-template-columns:1fr}}
+.drow{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;font-size:13px;border-bottom:1px solid var(--b1)}
+.drow:last-child{border-bottom:none}
+.drow-lbl{color:var(--t2);flex-shrink:0;margin-right:10px}
+.drow-val{color:var(--t1);font-weight:500;text-align:right;word-break:break-word;max-width:65%}
+.blk-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin:1rem 0 7px}
+.next-step{
+  background:var(--blue-bg);border-left:3px solid var(--blue);
+  border-radius:0 var(--r) var(--r) 0;padding:10px 13px;font-size:13px;
+  color:var(--blue);font-weight:500;line-height:1.5
+}
+.notiz-box{
+  background:var(--s1);border-radius:var(--r);padding:11px 13px;font-size:13px;
+  color:var(--t1);line-height:1.65;white-space:pre-wrap;word-break:break-word;min-height:52px
+}
+.notiz-empty{color:var(--t3);font-style:italic}
+.note-rendered{white-space:normal}
+.note-rendered .note-list{margin:6px 0;padding-left:20px}
+.note-rendered .note-list li{margin:2px 0}
+.note-rendered strong{font-weight:700}
+.note-rendered em{font-style:italic}
+.note-hint{font-size:11px;color:var(--t3);margin-top:5px}
+.note-hint code{background:var(--s2);padding:1px 4px;border-radius:3px;font-size:11px}
+.tags-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.tag{padding:2px 8px;border-radius:3px;font-size:11px;background:var(--s2);color:var(--t2)}
+
+/* ── Person-Pill ── */
+.person-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--s1);border:1px solid var(--b1);border-radius:20px;
+  padding:4px 10px 4px 5px;font-size:12px;cursor:pointer;transition:border-color .12s
+}
+.person-pill:hover{border-color:var(--b2)}
+.person-av{
+  width:22px;height:22px;border-radius:50%;background:var(--blue-bg);
+  color:var(--blue);font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0
+}
+
+/* ── Modal ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;
+  align-items:center;justify-content:center;z-index:100;padding:1rem
+}
+.modal{
+  background:var(--s0);border-radius:var(--rl);padding:1.4rem;width:100%;
+  max-width:480px;max-height:92vh;overflow-y:auto;border:1px solid var(--b2);
+  box-shadow:0 8px 36px rgba(0,0,0,.14)
+}
+.modal h2{font-size:15px;font-weight:600;margin-bottom:1rem;color:var(--t1)}
+.form-row{margin-bottom:9px}
+.form-row label{
+  display:block;font-size:11px;color:var(--t2);margin-bottom:3px;
+  text-transform:uppercase;letter-spacing:.4px;font-weight:600
+}
+.form-row input,.form-row select,.form-row textarea{
+  width:100%;padding:7px 9px;border:1px solid var(--b1);border-radius:var(--r);
+  font-size:13px;background:var(--s0);color:var(--t1);font-family:inherit;outline:none
+}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--blue)}
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.1rem;padding-top:.8rem;border-top:1px solid var(--b1)}
+.divider{height:1px;background:var(--b1);margin:8px 0}
+.hidden{display:none!important}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+  background:var(--t1);color:var(--bg);padding:8px 18px;border-radius:var(--r);
+  font-size:13px;font-weight:500;z-index:300;opacity:0;transition:opacity .2s;
+  pointer-events:none;white-space:nowrap
+}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--t3);font-size:13px}
+
+@media(max-width:600px){
+  .metrics{grid-template-columns:1fr 1fr}
+  .form-2col{grid-template-columns:1fr}
+  .main{padding:1rem .75rem}
+  .topbar{padding:0 .75rem}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Methoden<em>beratung</em><span style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px">v8.2</span></div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="go('dashboard')">Übersicht</button>
+    <button class="nav-btn" onclick="go('heute')">Heute</button>
+    <button class="nav-btn" onclick="go('faelle')">Fälle</button>
+    <button class="nav-btn" onclick="go('kalender')">Kalender</button>
+    <button class="nav-btn" onclick="go('statistik')">Statistik</button>
+  </nav>
+  <div class="topbar-right">
+    <button class="btn btn-sm btn-primary" onclick="openSchnelleintrag()">+ Schnelleintrag</button>
+    <button class="btn btn-sm" onclick="exportData()">↓ Export</button>
+    <button class="btn btn-sm" onclick="document.getElementById('import-file').click()">↑ Import</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+  </div>
+</div>
+
+<main class="main">
+
+  <div class="metrics" id="metrics"></div>
+
+  <!-- ÜBERSICHT (Dashboard) -->
+  <div class="panel active" id="panel-dashboard">
+    <div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="openFallModal()">+ Neuer Fall</button>
+      <button class="btn" onclick="openTerminModal()">+ Neuer Termin</button>
+    </div>
+    <div id="dash-deadlines" style="margin-bottom:10px"></div>
+    <div class="dash-grid">
+      <div>
+        <div class="sec-hd"><div class="sec-title">Nächste Termine</div></div>
+        <div id="dash-termine"></div>
+      </div>
+      <div>
+        <div class="sec-hd"><div class="sec-title">Brauchen Aufmerksamkeit</div></div>
+        <div id="dash-attention"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEUTE -->
+  <div class="panel" id="panel-heute">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div id="heute-label" style="font-size:16px;font-weight:600;color:var(--t1)"></div>
+      <button class="btn btn-primary btn-sm" onclick="openTerminModal()">+ Termin</button>
+    </div>
+    <div id="heute-content"></div>
+  </div>
+
+  <!-- FÄLLE -->
+  <div class="panel" id="panel-faelle">
+    <div class="toolbar">
+      <input class="search-inp" id="case-search" placeholder="Name, Projekttitel, Thema, Stichwort …" oninput="renderFaelle()">
+      <select class="filter-sel" id="case-filter-qq" onchange="renderFaelle()">
+        <option value="">Quant + Quali</option>
+        <option value="quantitativ">Quantitativ</option>
+        <option value="qualitativ">Qualitativ</option>
+        <option value="gemischt">Gemischt</option>
+      </select>
+      <select class="filter-sel" id="case-filter-status" onchange="renderFaelle()">
+        <option value="">Alle Status</option>
+        <option value="neu">Neu</option>
+        <option value="angefragt">Angefragt</option>
+        <option value="terminiert">Terminiert</option>
+        <option value="laufend">Laufend</option>
+        <option value="wartet">Wartet auf Rückmeldung</option>
+        <option value="abgeschlossen">Abgeschlossen</option>
+      </select>
+      <button class="btn btn-primary" onclick="openFallModal()">+ Neuer Fall</button>
+    </div>
+    <div id="case-list"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="panel" id="panel-detail">
+    <button class="back-btn" id="back-btn" onclick="goBack()">← Zurück</button>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- KALENDER -->
+  <div class="panel" id="panel-kalender">
+    <div class="cal-nav">
+      <button class="btn btn-sm" onclick="calMove(-1)">‹</button>
+      <div class="cal-title" id="cal-title"></div>
+      <button class="btn btn-sm" onclick="calMove(1)">›</button>
+      <button class="btn btn-sm" onclick="calToday()" style="margin-left:4px">Heute</button>
+    </div>
+    <div class="cal-grid" id="cal-hdr"></div>
+    <div class="cal-grid" id="cal-body" style="margin-top:3px"></div>
+  </div>
+
+  <!-- TAG-ANSICHT -->
+  <div class="panel" id="panel-day">
+    <button class="back-btn" onclick="go('kalender')">← Zurück</button>
+    <div id="day-content"></div>
+  </div>
+
+  <!-- STATISTIK -->
+  <div class="panel" id="panel-statistik">
+    <div id="stats-content"></div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── Modal: Schnelleintrag ─────────────────────────────────────────────── -->
+<div class="overlay hidden" id="modal-schnell">
+  <div class="modal" style="max-width:520px">
+    <h2>Schnelleintrag</h2>
+
+    <!-- Sektion 1: Person -->
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Person</div>
+    <div class="form-row">
+      <label>Vorhandene Person wählen</label>
+      <select id="sn-person-id" onchange="onSnPersonChange(this.value)">
+        <option value="">– wählen –</option>
+        <option value="__new__">+ Neue Person</option>
+      </select>
+    </div>
+    <div id="sn-new-person-block" class="hidden">
+      <div class="form-2col">
+        <div class="form-row"><label>Name *</label><input type="text" id="sn-name" autocomplete="off" placeholder="Vor- und Nachname"></div>
+        <div class="form-row"><label>Studiengang</label><input type="text" id="sn-stg" placeholder="z.B. Psychologie"></div>
+      </div>
+      <div class="form-row"><label>E-Mail (optional)</label><input type="email" id="sn-email"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Sektion 2: Fall -->
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Fall</div>
+    <div class="form-row"><label>Projekttitel *</label><input type="text" id="sn-titel" placeholder="Kurzer beschreibender Titel"></div>
+    <div class="form-row">
+      <label>Beratungsart</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--t1)">
+          <input type="radio" name="sn-qq" value="quantitativ" style="accent-color:var(--blue);width:14px;height:14px"> Quantitativ
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--t1)">
+          <input type="radio" name="sn-qq" value="qualitativ" style="accent-color:var(--purple);width:14px;height:14px"> Qualitativ
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--t1)">
+          <input type="radio" name="sn-qq" value="gemischt" style="accent-color:var(--amber);width:14px;height:14px"> Gemischt
+        </label>
+      </div>
+    </div>
+    <div class="form-2col">
+      <div class="form-row"><label>Projekttyp</label>
+        <select id="sn-typ">
+          <option>Hausarbeit</option><option>Bachelorarbeit</option><option selected>Masterarbeit</option>
+          <option>Dissertation</option><option>Forschungsprojekt</option><option>Sonstiges</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Software</label>
+        <select id="sn-software">
+          <option value="">–</option>
+          <option>R</option><option>SPSS</option><option>Stata</option><option>MAXQDA</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Stichwörter <span style="font-weight:400;text-transform:none;color:var(--t3)">(kommagetrennt)</span></label>
+      <input type="text" id="sn-tags" placeholder="z.B. fehlende Werte, Längsschnitt, Poweranalyse"></div>
+
+    <div class="divider"></div>
+
+    <!-- Sektion 3: Termin -->
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Termin</div>
+    <div class="form-2col">
+      <div class="form-row"><label>Datum</label><input type="date" id="sn-datum"></div>
+      <div class="form-row"><label>Format</label>
+        <select id="sn-format">
+          <option value="online">Online</option>
+          <option value="praesent">Präsenz</option>
+          <option value="telefonisch">Telefonisch</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-2col">
+      <div class="form-row"><label>Beginn</label><input type="time" id="sn-uhrzeit" value="10:00" oninput="onSnTimeChange()"></div>
+      <div class="form-row"><label>Ende</label><input type="time" id="sn-ende" value="11:00" oninput="onSnTimeChange()"></div>
+    </div>
+    <div id="sn-dauer-hint" style="font-size:11px;color:var(--t3);margin-top:-4px;margin-bottom:8px">Dauer: 60 min</div>
+    <div class="form-2col">
+      <div class="form-row"><label>Art</label>
+        <select id="sn-art">
+          <option>Erstberatung</option><option>Follow-up</option>
+          <option>Kurzfrage</option><option>Sonstiges</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Status</label>
+        <select id="sn-status">
+          <option value="erledigt">Erledigt</option>
+          <option value="geplant">Geplant</option>
+          <option value="abgesagt">Abgesagt</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-schnell')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveSchnelleintrag()">Person, Fall & Termin speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Fall ─────────────────────────────────────────────────────── -->
+<div class="overlay hidden" id="modal-fall">
+  <div class="modal" id="modal-fall-inner" style="max-width:480px;transition:max-width .2s">
+    <h2 id="modal-fall-h">Neuer Beratungsfall</h2>
+
+    <!-- E-Mail-Spickzettel -->
+    <div style="margin-bottom:10px">
+      <button type="button" class="btn btn-sm btn-ghost" style="width:100%;justify-content:space-between;border:1px dashed var(--b2)" onclick="toggleEmailPaste()">
+        <span>📋 E-Mail als Spickzettel einblenden</span>
+        <span id="email-paste-arrow">▼</span>
+      </button>
+      <div id="email-paste-block" style="display:none;margin-top:8px">
+        <textarea id="email-paste-text" rows="4" placeholder="E-Mail-Text hier reinkopieren — wird neben dem Formular angezeigt …"
+          style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--t1);font-family:inherit;outline:none;resize:vertical;line-height:1.5"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button type="button" class="btn btn-sm btn-primary" onclick="showEmailSpickzettel()">Anzeigen</button>
+          <button type="button" class="btn btn-sm btn-ghost" onclick="toggleEmailPaste()">Schließen</button>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <!-- Beratungsart — prominent ganz oben -->
+    <div class="form-row">
+      <label>Beratungsart</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--t1)" id="qq-quant-lbl">
+          <input type="radio" name="f-qq" value="quantitativ" id="qq-quant" style="accent-color:var(--blue);width:14px;height:14px"> Quantitativ
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--t1)" id="qq-quali-lbl">
+          <input type="radio" name="f-qq" value="qualitativ" id="qq-quali" style="accent-color:var(--purple);width:14px;height:14px"> Qualitativ
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--t1)" id="qq-gemischt-lbl">
+          <input type="radio" name="f-qq" value="gemischt" id="qq-gemischt" style="accent-color:var(--amber);width:14px;height:14px"> Gemischt
+        </label>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <!-- Person wählen oder neu anlegen -->
+    <div class="form-row">
+      <label>Person</label>
+      <select id="f-person-id" onchange="onPersonChange(this.value)">
+        <option value="">– wählen –</option>
+        <option value="__new__">+ Neue Person</option>
+      </select>
+      <div id="person-edit-link" style="display:none;margin-top:5px">
+        <button type="button" class="btn-ghost btn btn-sm" onclick="openPersonModalFromFall()" style="font-size:11px;padding:2px 6px">✏ Person bearbeiten (Name, Studiengang, E-Mail)</button>
+      </div>
+    </div>
+    <div id="new-person-block" class="hidden">
+      <div class="form-2col">
+        <div class="form-row"><label>Name *</label><input type="text" id="np-name" autocomplete="off" placeholder="Vor- und Nachname"></div>
+        <div class="form-row"><label>Studiengang</label><input type="text" id="np-stg" placeholder="z.B. Psychologie"></div>
+      </div>
+      <div class="form-row"><label>E-Mail (optional)</label><input type="email" id="np-email"></div>
+      <div class="divider"></div>
+    </div>
+
+    <div class="form-row"><label>Projekttitel *</label><input type="text" id="f-titel" placeholder="Kurzer beschreibender Titel"></div>
+
+    <div class="form-2col">
+      <div class="form-row"><label>Projekttyp</label>
+        <select id="f-typ">
+          <option>Hausarbeit</option><option>Bachelorarbeit</option><option>Masterarbeit</option>
+          <option>Dissertation</option><option>Forschungsprojekt</option><option>Sonstiges</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Software</label>
+        <select id="f-software">
+          <option value="">–</option>
+          <option>R</option><option>SPSS</option><option>Stata</option><option>MAXQDA</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row"><label>Fragen / Beratungsanliegen <span style="font-weight:400;text-transform:none;color:var(--t3)">(optional)</span></label>
+      <textarea id="f-fragen" rows="3" placeholder="Konkrete Fragen der Person, z.B. direkt aus der E-Mail …" style="resize:vertical"></textarea></div>
+
+    <div class="form-row"><label>Stichwörter <span style="font-weight:400;text-transform:none;color:var(--t3)">(kommagetrennt)</span></label>
+      <input type="text" id="f-tags" placeholder="z.B. fehlende Werte, Längsschnitt, Poweranalyse"></div>
+
+    <div class="form-2col">
+      <div class="form-row"><label>Datenstatus</label>
+        <select id="f-datenstatus">
+          <option>Keine Daten</option>
+          <option>Datenerhebung geplant</option>
+          <option>Datensatz vorhanden</option>
+          <option>Analyse läuft</option>
+          <option>Auswertung abgeschlossen</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Deadline</label><input type="date" id="f-deadline"></div>
+    </div>
+
+    <div class="form-2col">
+      <div class="form-row"><label>Status</label>
+        <select id="f-status" onchange="onFallStatusChange(this.value)">
+          <option value="neu">Neu</option>
+          <option value="angefragt">Angefragt</option>
+          <option value="terminiert">Terminiert</option>
+          <option value="laufend">Laufend</option>
+          <option value="wartet">Wartet auf Rückmeldung</option>
+          <option value="abgeschlossen">Abgeschlossen</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Priorität</label>
+        <select id="f-prio">
+          <option value="normal">Normal</option>
+          <option value="hoch">⬆ Hoch</option>
+        </select>
+      </div>
+    </div>
+
+    <input type="hidden" id="f-edit-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-fall')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveFall()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Termin ───────────────────────────────────────────────────── -->
+<div class="overlay hidden" id="modal-termin">
+  <div class="modal">
+    <h2 id="modal-termin-h">Neuer Termin</h2>
+    <div class="form-row"><label>Fall</label>
+      <select id="t-fall-id"><option value="">– Fall wählen –</option></select></div>
+    <div class="form-row"><label>Datum</label><input type="date" id="t-datum"></div>
+    <div class="form-2col">
+      <div class="form-row"><label>Beginn</label><input type="time" id="t-uhrzeit" value="10:00" oninput="onTimeChange()"></div>
+      <div class="form-row"><label>Ende</label><input type="time" id="t-ende" value="11:00" oninput="onTimeChange()"></div>
+    </div>
+    <div class="form-row" id="t-dauer-hint" style="font-size:11px;color:var(--t3);margin-top:-4px">Dauer: 60 min</div>
+    <div class="form-2col">
+      <div class="form-row"><label>Format</label>
+        <select id="t-format">
+          <option value="online">Online</option>
+          <option value="praesent">Präsenz</option>
+          <option value="telefonisch">Telefonisch</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Art</label>
+        <select id="t-art">
+          <option>Erstberatung</option><option>Follow-up</option>
+          <option>Kurzfrage</option><option>Sonstiges</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Status</label>
+      <select id="t-status">
+        <option value="geplant">Geplant</option>
+        <option value="erledigt">Erledigt</option>
+        <option value="abgesagt">Abgesagt</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Notiz (optional)</label>
+      <textarea id="t-notiz" rows="2" style="resize:vertical"></textarea></div>
+    <input type="hidden" id="t-edit-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-termin')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveTermin()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Person bearbeiten ────────────────────────────────────────── -->
+<div class="overlay hidden" id="modal-person">
+  <div class="modal" style="max-width:360px">
+    <h2>Person bearbeiten</h2>
+    <div class="form-row"><label>Name</label><input type="text" id="pe-name" autocomplete="off"></div>
+    <div class="form-row"><label>Studiengang</label><input type="text" id="pe-stg"></div>
+    <div class="form-row"><label>E-Mail</label><input type="email" id="pe-email" placeholder="vorname.nachname@uni.de"></div>
+    <input type="hidden" id="pe-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-person')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="savePersonModal()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+// Daten liegen in IndexedDB. Damit alle bestehenden, synchronen db.*/save.*-Aufrufe
+// unverändert funktionieren, hält ein In-Memory-Cache (MEM) den aktuellen Stand;
+// Schreibvorgänge werden asynchron nach IndexedDB persistiert.
+const SK = { persons:'mb_persons', cases:'mb_cases', appts:'mb_appts' };
+const SK_ALL = [SK.persons, SK.cases, SK.appts];
+const IDB_NAME='methodenberatungDB', IDB_VERSION=1, IDB_STORE='data';
+
+let _idb=null;        // gecachtes IDBDatabase-Handle
+let _useIDB=true;     // false → Fallback auf localStorage (z.B. privater Modus)
+const MEM={};         // In-Memory-Cache: Schlüssel → Array
+
+function openIDB(){
+  return new Promise((resolve,reject)=>{
+    if(_idb){resolve(_idb);return;}
+    if(!('indexedDB' in window)||!window.indexedDB){reject(new Error('IndexedDB nicht verfügbar'));return;}
+    const req=indexedDB.open(IDB_NAME,IDB_VERSION);
+    req.onupgradeneeded=e=>{
+      const dbi=e.target.result;
+      if(!dbi.objectStoreNames.contains(IDB_STORE)) dbi.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess=e=>{_idb=e.target.result; resolve(_idb);};
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+function idbGet(dbi,key){
+  return new Promise((resolve,reject)=>{
+    const req=dbi.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+function idbPut(dbi,key,val){
+  return new Promise((resolve,reject)=>{
+    const req=dbi.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(JSON.parse(JSON.stringify(val)),key);
+    req.onsuccess=()=>resolve();
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+
+// Defensiv parsen: ein korrupter localStorage-Eintrag soll nicht die ganze App crashen.
+function lsLoad(key){
+  try{
+    const v=JSON.parse(localStorage.getItem(key)||'[]');
+    return Array.isArray(v)?v:[];
+  }catch(e){
+    console.warn('Beschädigte Daten in',key,'– ignoriert.',e);
+    return [];
+  }
+}
+
+// Beim Start: IndexedDB öffnen, alle Schlüssel in den Cache laden, ggf. aus
+// localStorage migrieren. Bei fehlender IndexedDB-Unterstützung Fallback auf localStorage.
+async function loadDB(){
+  try{
+    const dbi=await openIDB();
+    let migrated=false;
+    for(const key of SK_ALL){
+      let val=await idbGet(dbi,key);
+      if(!Array.isArray(val)){
+        if(localStorage.getItem(key)!==null){ val=lsLoad(key); await idbPut(dbi,key,val); migrated=true; }
+        else val=[];
+      }
+      MEM[key]=val;
+    }
+    if(migrated){
+      SK_ALL.forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+      console.info('Von localStorage zu IndexedDB migriert.');
+    }
+  }catch(e){
+    console.warn('IndexedDB nicht verfügbar – nutze localStorage.',e);
+    _useIDB=false;
+    SK_ALL.forEach(k=>{MEM[k]=lsLoad(k);});
+  }
+}
+
+// Synchrones Lesen aus dem Cache (alle bestehenden Aufrufe bleiben unverändert).
+const db = {
+  persons : () => Array.isArray(MEM[SK.persons])?MEM[SK.persons]:[],
+  cases   : () => Array.isArray(MEM[SK.cases])  ?MEM[SK.cases]  :[],
+  appts   : () => Array.isArray(MEM[SK.appts])  ?MEM[SK.appts]  :[],
+};
+
+// Synchron in den Cache schreiben + asynchron persistieren.
+function persist(key,d){
+  MEM[key]=d;
+  if(_useIDB){
+    openIDB().then(dbi=>idbPut(dbi,key,d)).catch(e=>{
+      console.error('Speichern (IndexedDB) fehlgeschlagen für',key,e);
+      try{ localStorage.setItem(key,JSON.stringify(d)); }
+      catch(e2){ alert('Speichern fehlgeschlagen (Speicher voll oder gesperrt). Bitte ein Backup exportieren.'); }
+    });
+    return;
+  }
+  try{ localStorage.setItem(key,JSON.stringify(d)); }
+  catch(e){ console.error('Speichern fehlgeschlagen für',key,e); alert('Speichern fehlgeschlagen (Speicher voll oder gesperrt). Bitte ein Backup exportieren.'); }
+}
+const save = {
+  persons : d => persist(SK.persons,d),
+  cases   : d => persist(SK.cases,d),
+  appts   : d => persist(SK.appts,d),
+};
+
+// ═══════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════
+const CASE_STATUS = {
+  neu:          { label:'Neu',                   cls:'s-neu' },
+  angefragt:    { label:'Angefragt',             cls:'s-angefragt' },
+  terminiert:   { label:'Terminiert',            cls:'s-terminiert' },
+  laufend:      { label:'Laufend',               cls:'s-laufend' },
+  wartet:       { label:'Wartet auf Rückmeldung',cls:'s-wartet' },
+  abgeschlossen:{ label:'Abgeschlossen',         cls:'s-abgeschlossen' },
+};
+const QQ = {
+  quantitativ: { label:'Quantitativ', cls:'qq-quant' },
+  qualitativ:  { label:'Qualitativ',  cls:'qq-quali' },
+  gemischt:    { label:'Gemischt',    cls:'qq-gemischt' },
+};
+const APPT_STATUS = {
+  geplant:  { label:'Geplant',  cls:'a-geplant' },
+  erledigt: { label:'Erledigt', cls:'a-erledigt' },
+  abgesagt: { label:'Abgesagt', cls:'a-abgesagt' },
+};
+const MONTHS  = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const MONTHSS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const WDAYS   = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+const uid     = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+// Zentrales HTML-Escaping gegen XSS. Escaped sowohl Text- als auch Attribut-Kontexte
+// (beide Anführungszeichen), damit Nutzereingaben nie als HTML/Code interpretiert werden.
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Sichere Mini-Formatierung für Notizen: **fett**, *kursiv*, Zeilen mit "- "/"* " als
+// Aufzählung, Zeilenumbrüche. Es wird ZUERST vollständig escaped (XSS-Schutz); erst danach
+// werden ein paar wenige, sichere Muster in HTML übersetzt – beliebiges HTML bleibt neutralisiert.
+function fmtNote(s){
+  const inline = str => str
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  const out=[]; let list=null;
+  esc(s).split(/\r?\n/).forEach(line=>{
+    const m = line.match(/^\s*[-*]\s+(.+)$/);
+    if(m){ (list = list || []).push('<li>'+inline(m[1])+'</li>'); }
+    else {
+      if(list){ out.push('<ul class="note-list">'+list.join('')+'</ul>'); list=null; }
+      out.push(inline(line));
+    }
+  });
+  if(list) out.push('<ul class="note-list">'+list.join('')+'</ul>');
+  return out.join('<br>').replace(/<br>(<ul)/g,'$1').replace(/(<\/ul>)<br>/g,'$1');
+}
+const pad     = n  => n < 10 ? '0'+n : ''+n;
+const today   = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const fmtDate = s  => {
+  if(!s) return '–';
+  const parts = s.split('-');
+  if(parts.length!==3) return s;
+  const y=parts[0], m=parseInt(parts[1],10), d=parseInt(parts[2],10);
+  return pad(d)+'.'+pad(m)+'.'+y;
+};
+const addDays = (s,n) => { const d=new Date(s); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const initials = name => { const p=(name||'').split(/[\s,]+/).filter(Boolean); return ((p[0]||'')[0]||'').toUpperCase()+((p[1]||'')[0]||'').toUpperCase(); };
+const nameInitials = name => {
+  // "Anna Mehler" → "A. M."   "Müller, Jonas" → "M. J."
+  const parts = (name||'').split(/[\s,]+/).filter(Boolean);
+  return parts.map(p=>p[0].toUpperCase()+'.').join(' ');
+};
+const parseTags = s => (s||'').split(',').map(t=>t.trim()).filter(Boolean);
+const daysUntil = s => s ? Math.round((new Date(s)-new Date(today()))/86400000) : null;
+// Zeit-Helfer für Beginn/Ende ↔ Dauer
+const timeToMin = t => { const [h,m]=String(t||'').split(':').map(Number); return (h||0)*60+(m||0); };
+const minToTime = mins => { const m=((mins%1440)+1440)%1440; return pad(Math.floor(m/60))+':'+pad(m%60); };
+// Dauer (min) hübsch: 180 → "3 Std", 90 → "1 Std 30 min", 45 → "45 min"
+const fmtDur = mins => {
+  const n=Number(mins)||0, h=Math.floor(n/60), m=n%60;
+  if(h&&m) return `${h} Std ${m} min`;
+  if(h)    return `${h} Std`;
+  return `${m} min`;
+};
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+function badge(text,cls){ return `<span class="badge ${cls}">${text}</span>`; }
+function caseBadge(status){ const s=CASE_STATUS[status]||CASE_STATUS.neu; return badge(s.label,s.cls); }
+function apptBadge(status){ const s=APPT_STATUS[status]||APPT_STATUS.geplant; return badge(s.label,s.cls); }
+function qqBadge(qq){ const q=QQ[qq]; return q?badge(q.label,q.cls):''; }
+
+function personForCase(c){ return db.persons().find(p=>p.id===c.personId)||null; }
+function nameForCase(c){ const p=personForCase(c); return p?p.name:'?'; }
+function labelForCase(c){ return `${nameForCase(c)} — ${c.titel||'kein Titel'}`; }
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+let currentTab = 'dashboard';
+let detailBack = 'dashboard';
+
+function go(tab){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const btn = document.querySelector(`.nav-btn[onclick="go('${tab}')"]`);
+  if(btn) btn.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  currentTab = tab;
+  renderMetrics();
+  if(tab==='dashboard') renderDashboard();
+  if(tab==='heute')     renderHeute();
+  if(tab==='faelle')    renderFaelle();
+  if(tab==='kalender')  renderKal();
+  if(tab==='statistik') renderStats();
+}
+
+function showDetail(fallId, back){
+  detailBack = back || currentTab;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-detail').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  // highlight the source tab
+  const btn = document.querySelector(`.nav-btn[onclick="go('${detailBack}')"]`);
+  if(btn) btn.classList.add('active');
+  renderDetail(fallId);
+}
+
+function goBack(){
+  go(detailBack);
+}
+
+// ═══════════════════════════════════════════════════
+// SEED DATA
+// ═══════════════════════════════════════════════════
+function seedIfEmpty(){
+  // Wenn der Flag gesetzt ist, niemals mehr Beispieldaten laden
+  if(localStorage.getItem('mb_seeded')) return;
+  if(db.cases().length) { localStorage.setItem('mb_seeded','1'); return; }
+
+  const t   = today();
+  const p1  = {id:'p1',name:'Anna Mehler',studiengang:'Pädagogische Psychologie',email:''};
+  const p2  = {id:'p2',name:'Jonas Brandt',studiengang:'Klinische Psychologie',email:''};
+  const p3  = {id:'p3',name:'Mia Schäfer',studiengang:'Bildungswissenschaften',email:''};
+  const p4  = {id:'p4',name:'Lukas Reinhard',studiengang:'Erziehungswissenschaften',email:''};
+  const p5  = {id:'p5',name:'Sara Klein',studiengang:'Soziologie',email:''};
+
+  save.persons([p1,p2,p3,p4,p5]);
+
+  save.cases([
+    {id:'c1',personId:'p1',titel:'Determinanten von Lernmotivation – Moderationsanalyse',
+     qq:'quantitativ',typ:'Masterarbeit',software:'R',thema:'Moderierte Regression, Interaktionseffekte',
+     tags:['Interaktion','Poweranalyse'],datenstatus:'Analyse läuft',
+     deadline:addDays(t,6),status:'laufend',prioritaet:'hoch',
+     naechsterSchritt:'lavaan-Output gemeinsam prüfen, Visualisierung besprechen',
+     notiz:'Modell konvergiert, aber Fit-Indizes unplausibel. Bitte Datensatz auf Ausreißer prüfen lassen.',
+     abschlussnotiz:'',erstelltAm:t},
+    {id:'c2',personId:'p2',titel:'Längsschnittliche Effekte sozialer Unterstützung',
+     qq:'quantitativ',typ:'Dissertation',software:'R',thema:'Latent Growth Curve Model',
+     tags:['Längsschnitt','fehlende Werte','FIML'],datenstatus:'Datensatz vorhanden',
+     deadline:addDays(t,14),status:'wartet',prioritaet:'normal',
+     naechsterSchritt:'Auf bereinigten Datensatz warten',
+     notiz:'FIML für fehlende Daten erklärt. Schickt überarbeiteten Datensatz nächste Woche.',
+     abschlussnotiz:'',erstelltAm:addDays(t,-5)},
+    {id:'c3',personId:'p3',titel:'Einstellungen zu KI im Bildungsbereich',
+     qq:'gemischt',typ:'Bachelorarbeit',software:'SPSS',thema:'Deskriptivstatistik, Reliabilität, Chi²',
+     tags:['Fragebogen','Skalenkonstruktion'],datenstatus:'Datenerhebung geplant',
+     deadline:addDays(t,18),status:'terminiert',prioritaet:'normal',
+     naechsterSchritt:'Erstgespräch: Fragebogenkonstruktion besprechen',
+     notiz:'',abschlussnotiz:'',erstelltAm:t},
+    {id:'c4',personId:'p4',titel:'Effektivität von Peer-Tutoring',
+     qq:'quantitativ',typ:'Masterarbeit',software:'SPSS',thema:'t-Test, Effektgröße, Poweranalyse',
+     tags:['Gruppenvergleich'],datenstatus:'Auswertung abgeschlossen',
+     deadline:'',status:'abgeschlossen',prioritaet:'normal',
+     naechsterSchritt:'',
+     notiz:'',abschlussnotiz:'Arbeit abgegeben, Note 1,7. Unkomplizierter Fall.',erstelltAm:addDays(t,-20)},
+    {id:'c5',personId:'p5',titel:'Interviewauswertung zur Lehreridentität',
+     qq:'qualitativ',typ:'Masterarbeit',software:'MAXQDA',thema:'Qualitative Inhaltsanalyse',
+     tags:['Kategorienbildung','Interview'],datenstatus:'Datensatz vorhanden',
+     deadline:addDays(t,10),status:'laufend',prioritaet:'normal',
+     naechsterSchritt:'Kodierschema besprechen',
+     notiz:'Nutzt MAXQDA erstmals. Einführung in Codesystem nötig.',abschlussnotiz:'',erstelltAm:t},
+  ]);
+
+  save.appts([
+    {id:'a1',fallId:'c1',datum:t,         uhrzeit:'10:00',dauer:60,format:'online',art:'Follow-up',status:'geplant',notiz:'lavaan-Output gemeinsam durchgehen'},
+    {id:'a2',fallId:'c3',datum:t,         uhrzeit:'14:00',dauer:45,format:'praesent',art:'Erstberatung',status:'geplant',notiz:''},
+    {id:'a3',fallId:'c2',datum:addDays(t,7),uhrzeit:'11:00',dauer:60,format:'online',art:'Follow-up',status:'geplant',notiz:''},
+    {id:'a4',fallId:'c1',datum:addDays(t,-7),uhrzeit:'10:00',dauer:60,format:'online',art:'Follow-up',status:'erledigt',notiz:'Skalierung besprochen. Nächster Schritt: Modellvergleich.'},
+  ]);
+  localStorage.setItem('mb_seeded','1');
+}
+
+// ═══════════════════════════════════════════════════
+// METRICS
+// ═══════════════════════════════════════════════════
+function renderMetrics(){
+  const cases  = db.cases();
+  const appts  = db.appts();
+  const t      = today();
+  const offen  = cases.filter(c=>c.status!=='abgeschlossen').length;
+  const heuteN = appts.filter(a=>a.datum===t&&a.status==='geplant').length;
+  const urgent = cases.filter(c=>c.prioritaet==='hoch'&&c.status!=='abgeschlossen').length;
+  const dlN    = cases.filter(c=>{const d=daysUntil(c.deadline);return d!==null&&d>=0&&d<=7&&c.status!=='abgeschlossen';}).length;
+
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric"><div class="metric-val">${offen}</div><div class="metric-label">Offene Fälle</div></div>
+    <div class="metric"><div class="metric-val">${heuteN}</div><div class="metric-label">Heute</div><div class="metric-sub">${fmtDate(t)}</div></div>
+    <div class="metric"><div class="metric-val">${urgent}</div><div class="metric-label">Hohe Priorität</div></div>
+    <div class="metric"><div class="metric-val">${dlN}</div><div class="metric-label">Deadlines ≤ 7 Tage</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════
+function renderDashboard(){
+  const cases = db.cases();
+  const appts = db.appts();
+  const t     = today();
+
+  // Deadline banners
+  const nearDL = cases
+    .filter(c=>{const d=daysUntil(c.deadline);return d!==null&&d>=0&&d<=7&&c.status!=='abgeschlossen';})
+    .sort((a,b)=>a.deadline.localeCompare(b.deadline));
+  document.getElementById('dash-deadlines').innerHTML = nearDL.map(c=>{
+    const d=daysUntil(c.deadline);
+    const lbl=d===0?'Heute!':d===1?'Morgen':`In ${d} Tagen`;
+    return`<div class="dl-banner" onclick="showDetail('${c.id}','dashboard')">
+      <span><strong>${esc(nameForCase(c))}</strong> · ${esc(c.titel)}</span>
+      <strong>⏰ Deadline ${lbl}</strong>
+    </div>`;
+  }).join('');
+
+  // Nächste Termine
+  const upcoming = appts
+    .filter(a=>a.datum>=t&&a.status==='geplant')
+    .sort((a,b)=>(a.datum+a.uhrzeit).localeCompare(b.datum+b.uhrzeit))
+    .slice(0,6);
+  document.getElementById('dash-termine').innerHTML = upcoming.length
+    ? `<div class="tl-wrap">${upcoming.map(a=>terminTlHtml(a,'dashboard')).join('')}</div>`
+    : `<div class="empty" style="padding:1.5rem">Keine anstehenden Termine.</div>`;
+
+  // Aufmerksamkeit
+  const attention = cases
+    .filter(c=>c.status!=='abgeschlossen')
+    .filter(c=>c.prioritaet==='hoch'||c.status==='wartet'||(c.deadline&&c.deadline<=addDays(t,10)))
+    .slice(0,5);
+  document.getElementById('dash-attention').innerHTML = attention.length
+    ? attention.map(c=>caseRowHtml(c,'dashboard')).join('')
+    : `<div class="empty" style="padding:1.5rem">Alles im Griff.</div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// HEUTE
+// ═══════════════════════════════════════════════════
+function renderHeute(){
+  const t     = today();
+  const [y,m,d] = t.split('-');
+  document.getElementById('heute-label').textContent =
+    `${parseInt(d)}. ${MONTHS[parseInt(m)-1]} ${y}`;
+
+  const appts = db.appts().filter(a=>a.datum===t).sort((a,b)=>a.uhrzeit.localeCompare(b.uhrzeit));
+  const cases = db.cases();
+
+  if(!appts.length){
+    document.getElementById('heute-content').innerHTML=`<div class="empty">Keine Termine heute.</div>`;
+    return;
+  }
+  document.getElementById('heute-content').innerHTML =
+    `<div class="tl-wrap">${appts.map(a=>terminTlHtml(a,'heute',true)).join('')}</div>`;
+}
+
+function terminTlHtml(a, back, withActions){
+  const cases = db.cases();
+  const c     = cases.find(x=>x.id===a.fallId);
+  const name  = c ? nameForCase(c) : '?';
+  const [h,m] = a.uhrzeit.split(':').map(Number);
+  const endH  = Math.floor((h*60+m+Number(a.dauer))/60);
+  const endM  = (h*60+m+Number(a.dauer))%60;
+  const barCls = a.status==='erledigt'?'green':a.status==='abgesagt'?'red':'blue';
+  const fmtLabel = {online:'Online',praesent:'Präsenz',telefonisch:'Telefonisch'}[a.format]||a.format;
+
+  let actionsHtml='';
+  if(withActions && a.status==='geplant'){
+    actionsHtml=`<div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="markAppt('${a.id}','erledigt','${back}')">✓ Erledigt</button>
+      <button class="btn btn-sm btn-ghost" onclick="markAppt('${a.id}','abgesagt','${back}')">Abgesagt</button>
+      <button class="btn btn-sm btn-ghost" onclick="openTerminEdit('${a.id}')">✏</button>
+    </div>`;
+  } else if(withActions && a.status!=='geplant'){
+    actionsHtml=`<div style="margin-top:5px;display:flex;gap:5px">
+      <button class="btn btn-sm btn-ghost" onclick="openTerminEdit('${a.id}')">✏ Bearbeiten</button>
+    </div>`;
+  }
+
+  // Quick note after marking done
+  const qnId = `qn-${a.id}`;
+
+  return`<div class="tl-item" id="tl-${a.id}">
+    <div class="tl-time">
+      <div class="tl-time-h">${a.uhrzeit}</div>
+      <div class="tl-time-end">${pad(endH)}:${pad(endM)}</div>
+    </div>
+    <div class="tl-bar ${barCls}"></div>
+    <div class="tl-card" onclick="${c?`showDetail('${c.id}','${back}')`:''}" style="${withActions?'cursor:default':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div class="tl-card-name">${esc(name)}</div>
+          <div class="tl-card-meta">
+            <span>${esc(a.art)}</span>
+            ${badge(esc(fmtLabel),'f-'+esc(a.format))}
+            <span>${fmtDur(a.dauer)}</span>
+            ${apptBadge(a.status)}
+            ${a.notiz?`<span style="color:var(--t3)">· ${esc(a.notiz)}</span>`:''}
+          </div>
+          ${!withActions&&c?`<div style="margin-top:3px;font-size:11px;color:var(--t3)">${esc(c.titel)}</div>`:''}
+          ${actionsHtml}
+          <div id="${qnId}"></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function markAppt(id, status, back){
+  const appts = db.appts();
+  const i = appts.findIndex(x=>x.id===id); if(i<0) return;
+  appts[i].status = status;
+  save.appts(appts);
+
+  if(status==='erledigt'){
+    // Inline-Quick-Note zeigen, statt sofort neu zu rendern. Wichtig: die Suche muss
+    // auf das auslösende Panel beschränkt sein – derselbe Termin wird (mit identischer
+    // Element-ID) auch im Dashboard gerendert, sonst träfe getElementById das falsche Element.
+    const scope = document.getElementById(`panel-${back}`) || document;
+    const qnEl = scope.querySelector(`#qn-${id}`);
+    if(qnEl){
+      const plannedDur = Number(appts[i].dauer||0);
+      qnEl.innerHTML=`<div class="quick-note-dur">
+        <label for="qnd-${id}">Tatsächliche Dauer (min)</label>
+        <input type="number" id="qnd-${id}" min="0" step="5" value="${plannedDur}">
+      </div>
+      <div class="quick-note-bar">
+        <textarea rows="2" placeholder="Kurze Notiz zur Sitzung (optional) …" id="qnt-${id}"></textarea>
+        <button class="btn btn-sm btn-primary" onclick="saveQuickNote('${id}','${back}')">Speichern</button>
+        <button class="btn btn-sm btn-ghost" onclick="finishMark('${back}')">Überspringen</button>
+      </div>`;
+      // Balkenfarbe aktualisieren
+      const bar = scope.querySelector(`#tl-${id} .tl-bar`);
+      if(bar){ bar.className='tl-bar green'; }
+      // Aktions-Buttons entfernen (die Aktions-Leiste liegt direkt vor dem Quick-Note-Container)
+      const acts = qnEl.previousElementSibling;
+      if(acts) acts.remove();
+      return;
+    }
+  }
+  renderMetrics();
+  if(back==='heute') renderHeute();
+  else if(back==='dashboard') renderDashboard();
+  toast(status==='erledigt'?'Termin erledigt.':'Als abgesagt markiert.');
+}
+
+function saveQuickNote(apptId, back){
+  const txt = (document.getElementById(`qnt-${apptId}`)?.value||'').trim();
+  const durEl = document.getElementById(`qnd-${apptId}`);
+  const dur = durEl ? parseInt(durEl.value,10) : NaN;
+  const appts=db.appts();
+  const i=appts.findIndex(x=>x.id===apptId);
+  if(i>=0){
+    if(txt) appts[i].notiz=txt;
+    if(Number.isFinite(dur) && dur>0) appts[i].dauer=dur;
+    save.appts(appts);
+  }
+  finishMark(back);
+}
+
+function finishMark(back){
+  renderMetrics();
+  if(back==='heute') renderHeute();
+  else if(back==='dashboard') renderDashboard();
+  toast('Gespeichert.');
+}
+
+// ═══════════════════════════════════════════════════
+// FÄLLE (Liste)
+// ═══════════════════════════════════════════════════
+function caseRowHtml(c, back){
+  const p        = personForCase(c);
+  const appts    = db.appts();
+  const nextAppt = appts.filter(a=>a.fallId===c.id&&a.datum>=today()&&a.status==='geplant')
+                        .sort((a,b)=>a.datum.localeCompare(b.datum))[0];
+  const d        = daysUntil(c.deadline);
+  const deadlineStr = c.deadline
+    ? (d===0?'Heute':d===1?'Morgen':d!==null&&d<=7?`${d} Tage`:fmtDate(c.deadline))
+    : '';
+  const deadlineCls = d!==null&&d<=3?'color:var(--red)':d!==null&&d<=7?'color:var(--amber)':'color:var(--t3)';
+
+  return`<div class="row-item" onclick="showDetail('${c.id}','${back||'faelle'}')">
+    <div class="row-body">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+        <div class="row-name">${p?esc(p.name):'?'}</div>
+        ${c.qq?qqBadge(c.qq):''}
+        ${caseBadge(c.status)}
+        ${c.prioritaet==='hoch'?badge('⬆ Hoch','p-hoch'):''}
+      </div>
+      <div class="row-title">${esc(c.titel)||'–'}</div>
+      <div class="row-meta">
+        ${c.software?`<span>${esc(c.software)}</span>`:''}
+        ${nextAppt?`<span>· ${fmtDate(nextAppt.datum)} ${nextAppt.uhrzeit}</span>`:''}
+        ${deadlineStr?`<span style="${deadlineCls}">· ⏰ ${deadlineStr}</span>`:''}
+        ${c.naechsterSchritt?`<span style="color:var(--blue)">→ ${esc(c.naechsterSchritt)}</span>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderFaelle(){
+  const cases = db.cases();
+  const q   = (document.getElementById('case-search')?.value||'').toLowerCase();
+  const sf  = document.getElementById('case-filter-status')?.value||'';
+  const qf  = document.getElementById('case-filter-qq')?.value||'';
+
+  let fp = cases;
+  if(sf) fp=fp.filter(c=>c.status===sf);
+  if(qf) fp=fp.filter(c=>c.qq===qf);
+  if(q)  fp=fp.filter(c=>[nameForCase(c),c.titel,c.fragen,c.software,...(c.tags||[])]
+               .some(v=>(v||'').toLowerCase().includes(q)));
+  fp.sort((a,b)=>{
+    const po={hoch:0,normal:1};
+    return (po[a.prioritaet]||1)-(po[b.prioritaet]||1);
+  });
+
+  const el=document.getElementById('case-list');
+  if(!fp.length){
+    el.innerHTML=`<div class="empty">${cases.length?'Keine Treffer.':'Noch keine Fälle. Klicke auf "+ Neuer Fall".'}</div>`;
+    return;
+  }
+  el.innerHTML=fp.map(c=>caseRowHtml(c,'faelle')).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// DETAIL
+// ═══════════════════════════════════════════════════
+function renderDetail(id){
+  const c = db.cases().find(x=>x.id===id);
+  if(!c){ document.getElementById('detail-content').innerHTML='<div class="empty">Nicht gefunden.</div>'; return; }
+  const p = personForCase(c);
+  const allAppts = db.appts().filter(a=>a.fallId===id).sort((a,b)=>b.datum.localeCompare(a.datum));
+  const nextAppt = allAppts.filter(a=>a.datum>=today()&&a.status==='geplant')
+                           .sort((a,b)=>a.datum.localeCompare(b.datum))[0];
+  const d = daysUntil(c.deadline);
+  const deadlineCls = d!==null&&d<=3?'color:var(--red)':d!==null&&d<=7?'color:var(--amber)':'';
+
+  const tagsHtml = (c.tags||[]).length
+    ? `<div class="tags-row">${c.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>` : '';
+
+  const terminListHtml = allAppts.length
+    ? `<div class="tl-wrap">${allAppts.map(a=>{
+        const fmtLabel={online:'Online',praesent:'Präsenz',telefonisch:'Telefonisch'}[a.format]||a.format;
+        return`<div class="tl-item">
+          <div class="tl-time" style="padding-top:5px">
+            <div class="tl-time-h" style="font-size:11px">${fmtDate(a.datum)}</div>
+            <div class="tl-time-end">${a.uhrzeit}</div>
+          </div>
+          <div class="tl-bar ${a.status==='erledigt'?'green':a.status==='abgesagt'?'red':'blue'}"></div>
+          <div class="tl-card" style="cursor:default">
+            <div class="tl-card-meta" style="margin:0">
+              <strong style="color:var(--t1)">${esc(a.art)}</strong>
+              ${badge(esc(fmtLabel),'f-'+esc(a.format))}
+              <span>${fmtDur(a.dauer)}</span>
+              ${apptBadge(a.status)}
+            </div>
+            ${a.notiz?`<div style="font-size:12px;color:var(--t2);margin-top:4px;font-style:italic">${esc(a.notiz)}</div>`:''}
+            <div style="display:flex;gap:4px;margin-top:5px">
+              <button class="btn btn-sm btn-ghost" onclick="openTerminEdit('${a.id}')">✏ Bearbeiten</button>
+              <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="deleteTermin('${a.id}','${id}')">Löschen</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}</div>`
+    : `<div style="color:var(--t3);font-size:13px">Noch keine Termine.</div>`;
+
+  document.getElementById('detail-content').innerHTML=`
+    <div class="detail-layout">
+      <!-- Sidebar -->
+      <div class="detail-sidebar">
+        <div class="card">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
+            <div>
+              ${p?`<div class="person-pill" onclick="openPersonEdit('${p.id}')">
+                <div class="person-av">${initials(p.name)}</div>
+                <span>${esc(p.name)}</span>
+              </div>`:''}
+              ${p?.email?`<div style="margin-top:6px"><a href="mailto:${esc(p.email)}" style="font-size:12px;color:var(--blue);text-decoration:none" onclick="event.stopPropagation()">✉ ${esc(p.email)}</a></div>`:''}
+              <div style="font-size:15px;font-weight:600;color:var(--t1);margin-top:8px;line-height:1.3">${esc(c.titel)||'–'}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            ${c.qq?qqBadge(c.qq):''}
+            ${caseBadge(c.status)}
+            ${c.prioritaet==='hoch'?badge('⬆ Hoch','p-hoch'):''}
+          </div>
+          <div>
+            <div class="drow"><span class="drow-lbl">Typ</span><span class="drow-val">${esc(c.typ)||'–'}</span></div>
+            ${p?.studiengang?`<div class="drow"><span class="drow-lbl">Studiengang</span><span class="drow-val">${esc(p.studiengang)}</span></div>`:''}
+            <div class="drow"><span class="drow-lbl">Software</span><span class="drow-val">${esc(c.software)||'–'}</span></div>
+            <div class="drow"><span class="drow-lbl">Datenstatus</span><span class="drow-val">${esc(c.datenstatus)||'–'}</span></div>
+            <div class="drow"><span class="drow-lbl">Deadline</span>
+              <span class="drow-val" style="${deadlineCls}">${fmtDate(c.deadline)}</span></div>
+            <div class="drow"><span class="drow-lbl">Nächster Termin</span>
+              <span class="drow-val">${nextAppt?fmtDate(nextAppt.datum)+' '+nextAppt.uhrzeit:'–'}</span></div>
+          </div>
+          ${c.thema?`<div class="blk-title" style="margin-top:.75rem">Thema</div><div style="font-size:13px;color:var(--t1)">${esc(c.thema)}</div>`:''}
+          ${tagsHtml}
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn btn-primary" onclick="openTerminModal('${id}')">+ Termin hinzufügen</button>
+          <button class="btn" onclick="openFallEdit('${id}')">Fall bearbeiten</button>
+          <select onchange="changeStatus('${id}',this.value)" style="padding:7px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:13px;background:var(--s0);color:var(--t1);font-family:inherit;cursor:pointer">
+            <option value="">Status ändern …</option>
+            ${Object.entries(CASE_STATUS).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v.label}</option>`).join('')}
+          </select>
+          <button class="btn btn-danger" onclick="deleteFall('${id}')">Fall löschen</button>
+        </div>
+      </div>
+
+      <!-- Main -->
+      <div>
+        <!-- Fragen / Beratungsanliegen: inline-editable -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;margin-top:0">
+          <div class="blk-title" style="margin:0">Fragen / Beratungsanliegen</div>
+          <button class="btn-ghost btn btn-sm" onclick="inlineEdit('fragen','${id}')" id="edit-btn-fragen-${id}" style="font-size:11px">✏ Bearbeiten</button>
+        </div>
+        <div id="view-fragen-${id}">
+          <div class="notiz-box note-rendered ${c.fragen?'':'notiz-empty'}">${c.fragen?fmtNote(c.fragen):'Noch keine Fragen hinterlegt.'}</div>
+        </div>
+        <div id="edit-fragen-${id}" style="display:none">
+          <textarea id="inp-fragen-${id}" rows="4"
+            style="width:100%;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--r);font-size:13px;background:var(--s0);color:var(--t1);font-family:inherit;outline:none;resize:vertical;line-height:1.6"
+            onkeydown="if(event.key==='Escape')cancelInline('fragen','${id}')">${esc(c.fragen||'')}</textarea>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-primary btn-sm" onclick="saveInline('fragen','${id}')">Speichern</button>
+            <button class="btn btn-sm btn-ghost" onclick="cancelInline('fragen','${id}')">Abbrechen</button>
+          </div>
+        </div>
+
+        <!-- Nächster Schritt: inline-editable -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;margin-top:0">
+          <div class="blk-title" style="margin:0">Nächster Schritt</div>
+          <button class="btn-ghost btn btn-sm" onclick="inlineEdit('next','${id}')" id="edit-btn-next-${id}" style="font-size:11px">✏ Bearbeiten</button>
+        </div>
+        <div id="view-next-${id}">
+          ${c.naechsterSchritt
+            ? `<div class="next-step">${esc(c.naechsterSchritt)}</div>`
+            : `<div style="color:var(--t3);font-size:13px;font-style:italic">Kein nächster Schritt hinterlegt.</div>`}
+        </div>
+        <div id="edit-next-${id}" style="display:none">
+          <input type="text" id="inp-next-${id}" value="${esc(c.naechsterSchritt)}"
+            style="width:100%;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--r);font-size:13px;background:var(--s0);color:var(--t1);font-family:inherit;outline:none"
+            onkeydown="if(event.key==='Enter')saveInline('next','${id}');if(event.key==='Escape')cancelInline('next','${id}')">
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-primary btn-sm" onclick="saveInline('next','${id}')">Speichern</button>
+            <button class="btn btn-sm btn-ghost" onclick="cancelInline('next','${id}')">Abbrechen</button>
+          </div>
+        </div>
+
+        <!-- Fallnotiz: inline-editable -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;margin-top:1rem">
+          <div class="blk-title" style="margin:0">Fallnotiz</div>
+          <button class="btn-ghost btn btn-sm" onclick="inlineEdit('notiz','${id}')" id="edit-btn-notiz-${id}" style="font-size:11px">✏ Bearbeiten</button>
+        </div>
+        <div id="view-notiz-${id}">
+          <div class="notiz-box note-rendered ${c.notiz?'':'notiz-empty'}">${c.notiz?fmtNote(c.notiz):'Noch keine Notiz.'}</div>
+        </div>
+        <div id="edit-notiz-${id}" style="display:none">
+          <textarea id="inp-notiz-${id}" rows="5"
+            style="width:100%;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--r);font-size:13px;background:var(--s0);color:var(--t1);font-family:inherit;outline:none;resize:vertical;line-height:1.6"
+            onkeydown="if(event.key==='Escape')cancelInline('notiz','${id}')">${esc(c.notiz)}</textarea>
+          <div class="note-hint">Formatierung: <code>**fett**</code>, <code>*kursiv*</code>, Zeile mit <code>- </code> für Aufzählung, Enter für neue Zeile.</div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-primary btn-sm" onclick="saveInline('notiz','${id}')">Speichern</button>
+            <button class="btn btn-sm btn-ghost" onclick="cancelInline('notiz','${id}')">Abbrechen</button>
+          </div>
+        </div>
+
+        ${c.status==='abgeschlossen'?`
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;margin-top:1rem">
+            <div class="blk-title" style="margin:0">Abschlussnotiz</div>
+            <button class="btn-ghost btn btn-sm" onclick="inlineEdit('abschluss','${id}')" id="edit-btn-abschluss-${id}" style="font-size:11px">✏ Bearbeiten</button>
+          </div>
+          <div id="view-abschluss-${id}">
+            <div class="notiz-box note-rendered ${c.abschlussnotiz?'':'notiz-empty'}">${c.abschlussnotiz?fmtNote(c.abschlussnotiz):'Noch keine Abschlussnotiz.'}</div>
+          </div>
+          <div id="edit-abschluss-${id}" style="display:none">
+            <textarea id="inp-abschluss-${id}" rows="4"
+              style="width:100%;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--r);font-size:13px;background:var(--s0);color:var(--t1);font-family:inherit;outline:none;resize:vertical;line-height:1.6"
+              onkeydown="if(event.key==='Escape')cancelInline('abschluss','${id}')">${esc(c.abschlussnotiz)}</textarea>
+            <div class="note-hint">Formatierung: <code>**fett**</code>, <code>*kursiv*</code>, Zeile mit <code>- </code> für Aufzählung, Enter für neue Zeile.</div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button class="btn btn-primary btn-sm" onclick="saveInline('abschluss','${id}')">Speichern</button>
+              <button class="btn btn-sm btn-ghost" onclick="cancelInline('abschluss','${id}')">Abbrechen</button>
+            </div>
+          </div>`:''}
+
+        <div class="blk-title">Termine (${allAppts.length})</div>
+        ${terminListHtml}
+      </div>
+    </div>`;
+}
+
+function inlineEdit(field, id){
+  document.getElementById(`view-${field}-${id}`).style.display='none';
+  document.getElementById(`edit-${field}-${id}`).style.display='';
+  document.getElementById(`edit-btn-${field}-${id}`).style.display='none';
+  const inp=document.getElementById(`inp-${field}-${id}`);
+  if(inp){ inp.focus(); if(inp.tagName==='TEXTAREA'){ inp.selectionStart=inp.value.length; } }
+}
+
+function cancelInline(field, id){
+  document.getElementById(`view-${field}-${id}`).style.display='';
+  document.getElementById(`edit-${field}-${id}`).style.display='none';
+  document.getElementById(`edit-btn-${field}-${id}`).style.display='';
+}
+
+function saveInline(field, id){
+  const val = document.getElementById(`inp-${field}-${id}`).value.trim();
+  const cases = db.cases();
+  const i = cases.findIndex(x=>x.id===id); if(i<0) return;
+  if(field==='next')      cases[i].naechsterSchritt = val;
+  if(field==='notiz')     cases[i].notiz = val;
+  if(field==='fragen')    cases[i].fragen = val;
+  if(field==='abschluss') cases[i].abschlussnotiz = val;
+  save.cases(cases);
+  renderDetail(id);
+  toast('Gespeichert.');
+}
+
+function changeStatus(id, val){
+  if(!val) return;
+  const cases=db.cases(), i=cases.findIndex(x=>x.id===id);
+  if(i<0) return;
+  cases[i].status=val;
+  save.cases(cases);
+  renderDetail(id);
+  toast('Status geändert.');
+}
+
+function deleteFall(id){
+  if(!confirm('Fall und alle Termine löschen?')) return;
+  const c = db.cases().find(x=>x.id===id);
+  const personId = c?.personId;
+  save.cases(db.cases().filter(x=>x.id!==id));
+  save.appts(db.appts().filter(a=>a.fallId!==id));
+  // Wenn die Person keinen weiteren Fall hat, ebenfalls löschen
+  if(personId){
+    const remaining = db.cases().filter(x=>x.personId===personId);
+    if(remaining.length===0){
+      save.persons(db.persons().filter(p=>p.id!==personId));
+    }
+  }
+  goBack(); toast('Fall gelöscht.');
+}
+
+function deleteTermin(tid, fallId){
+  if(!confirm('Termin löschen?')) return;
+  save.appts(db.appts().filter(a=>a.id!==tid));
+  renderDetail(fallId); toast('Termin gelöscht.');
+}
+
+// ═══════════════════════════════════════════════════
+// FALL MODAL
+// ═══════════════════════════════════════════════════
+function populatePersonSelect(selectedId){
+  const persons = db.persons();
+  const sel = document.getElementById('f-person-id');
+  sel.innerHTML=`<option value="">– wählen –</option>
+    <option value="__new__">+ Neue Person</option>`+
+    persons.map(p=>`<option value="${esc(p.id)}"${p.id===selectedId?' selected':''}>${esc(p.name)}${p.studiengang?' ('+esc(p.studiengang)+')':''}</option>`).join('');
+}
+
+function onPersonChange(val){
+  document.getElementById('new-person-block').classList.toggle('hidden', val!=='__new__');
+  const editLink = document.getElementById('person-edit-link');
+  if(editLink) editLink.style.display = (val && val!=='__new__') ? '' : 'none';
+}
+
+function onFallStatusChange(val){
+  document.getElementById('f-abschluss-row').classList.toggle('hidden', val!=='abgeschlossen');
+}
+
+function openFallModal(prefill){
+  document.getElementById('modal-fall-h').textContent='Neuer Beratungsfall';
+  populatePersonSelect('');
+  ['f-titel','f-fragen','f-tags','f-deadline','np-name','np-stg','np-email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-typ').value='Masterarbeit';
+  document.getElementById('f-software').value='';
+  document.getElementById('f-datenstatus').value='Keine Daten';
+  document.getElementById('f-status').value='neu';
+  document.getElementById('f-prio').value='normal';
+  document.getElementById('f-edit-id').value='';
+  document.getElementById('new-person-block').classList.add('hidden');
+  document.getElementById('person-edit-link').style.display='none';
+  document.querySelectorAll('input[name="f-qq"]').forEach(r=>r.checked=false);
+  // Spickzettel zurücksetzen
+  hideEmailSpickzettel();
+  document.getElementById('email-paste-text').value='';
+  document.getElementById('email-paste-block').style.display='none';
+  document.getElementById('email-paste-arrow').textContent='▼';
+  if(prefill){ if(prefill.name) document.getElementById('np-name').value=prefill.name; }
+  document.getElementById('modal-fall').classList.remove('hidden');
+}
+
+function openFallEdit(id){
+  const c=db.cases().find(x=>x.id===id); if(!c) return;
+  document.getElementById('modal-fall-h').textContent='Fall bearbeiten';
+  populatePersonSelect(c.personId);
+  document.getElementById('f-titel').value=c.titel||'';
+  document.getElementById('f-typ').value=c.typ||'Masterarbeit';
+  document.getElementById('f-software').value=c.software||'';
+  document.getElementById('f-fragen').value=c.fragen||'';
+  document.getElementById('f-tags').value=(c.tags||[]).join(', ');
+  document.getElementById('f-datenstatus').value=c.datenstatus||'Keine Daten';
+  document.getElementById('f-deadline').value=c.deadline||'';
+  document.getElementById('f-status').value=c.status||'neu';
+  document.getElementById('f-prio').value=c.prioritaet||'normal';
+  document.getElementById('f-edit-id').value=id;
+  document.getElementById('new-person-block').classList.add('hidden');
+  document.getElementById('person-edit-link').style.display=c.personId?'':'none';
+  // set qq radio
+  document.querySelectorAll('input[name="f-qq"]').forEach(r=>{ r.checked = r.value===(c.qq||''); });
+  // Spickzettel zurücksetzen
+  hideEmailSpickzettel();
+  document.getElementById('email-paste-text').value='';
+  document.getElementById('email-paste-block').style.display='none';
+  document.getElementById('email-paste-arrow').textContent='▼';
+  document.getElementById('modal-fall').classList.remove('hidden');
+}
+
+function saveFall(){
+  const personId_raw = document.getElementById('f-person-id').value;
+  const titel = document.getElementById('f-titel').value.trim();
+  if(!titel){ alert('Bitte Projekttitel eingeben.'); return; }
+
+  const persons = db.persons();
+  let personId = personId_raw;
+
+  if(personId_raw==='__new__'){
+    const name=document.getElementById('np-name').value.trim();
+    if(!name){ alert('Bitte Name eingeben.'); return; }
+    const newP={ id:uid(), name, studiengang:document.getElementById('np-stg').value.trim(),
+                 email:document.getElementById('np-email').value.trim() };
+    persons.push(newP); save.persons(persons);
+    personId=newP.id;
+  } else if(!personId_raw){
+    alert('Bitte eine Person wählen oder neu anlegen.'); return;
+  }
+
+  const editId = document.getElementById('f-edit-id').value;
+  const cases  = db.cases();
+  const data = {
+    personId, titel,
+    qq:            (document.querySelector('input[name="f-qq"]:checked')?.value)||'',
+    typ:           document.getElementById('f-typ').value,
+    software:      document.getElementById('f-software').value,
+    fragen:        document.getElementById('f-fragen').value.trim(),
+    tags:          parseTags(document.getElementById('f-tags').value),
+    datenstatus:   document.getElementById('f-datenstatus').value,
+    deadline:      document.getElementById('f-deadline').value,
+    status:        document.getElementById('f-status').value,
+    prioritaet:    document.getElementById('f-prio').value,
+  };
+
+  if(editId){
+    const i=cases.findIndex(x=>x.id===editId);
+    if(i>=0) cases[i]={...cases[i],...data};
+    save.cases(cases);
+    closeModal('modal-fall');
+    renderDetail(editId);
+    toast('Fall aktualisiert.');
+  } else {
+    cases.push({id:uid(),erstelltAm:today(),...data});
+    save.cases(cases);
+    closeModal('modal-fall');
+    renderMetrics();
+    if(currentTab==='dashboard') renderDashboard();
+    else if(currentTab==='faelle') renderFaelle();
+    else renderDashboard();
+    toast('Fall gespeichert.');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// TERMIN MODAL
+// ═══════════════════════════════════════════════════
+function populateFallSelect(selectedFallId){
+  const cases=db.cases().filter(c=>c.status!=='abgeschlossen');
+  document.getElementById('t-fall-id').innerHTML=
+    `<option value="">– Fall wählen –</option>`+
+    cases.map(c=>`<option value="${esc(c.id)}"${c.id===selectedFallId?' selected':''}>${esc(labelForCase(c))}</option>`).join('');
+}
+
+function openTerminModal(prefallId){
+  document.getElementById('modal-termin-h').textContent='Neuer Termin';
+  populateFallSelect(prefallId||'');
+  document.getElementById('t-datum').value=today();
+  document.getElementById('t-uhrzeit').value='10:00';
+  document.getElementById('t-ende').value='11:00';
+  onTimeChange();
+  document.getElementById('t-format').value='online';
+
+  // Smart default art: if fall has existing appts → Follow-up, else Erstberatung
+  if(prefallId){
+    const existing=db.appts().filter(a=>a.fallId===prefallId&&a.status==='erledigt');
+    document.getElementById('t-art').value=existing.length?'Follow-up':'Erstberatung';
+  } else {
+    document.getElementById('t-art').value='Erstberatung';
+  }
+  document.getElementById('t-status').value='geplant';
+  document.getElementById('t-notiz').value='';
+  document.getElementById('t-edit-id').value='';
+  document.getElementById('modal-termin').classList.remove('hidden');
+}
+
+// Dauer-Hinweis im Termin-Formular aus Beginn/Ende ableiten
+function onTimeChange(){
+  const start=document.getElementById('t-uhrzeit').value;
+  const ende =document.getElementById('t-ende').value;
+  const hint=document.getElementById('t-dauer-hint');
+  if(!start||!ende){ hint.textContent='Dauer: –'; hint.style.color='var(--t3)'; return; }
+  const d=timeToMin(ende)-timeToMin(start);
+  if(d<=0){ hint.textContent='Ende muss nach Beginn liegen'; hint.style.color='var(--red)'; }
+  else    { hint.textContent='Dauer: '+fmtDur(d); hint.style.color='var(--t3)'; }
+}
+
+function openTerminEdit(id){
+  const a=db.appts().find(x=>x.id===id); if(!a) return;
+  document.getElementById('modal-termin-h').textContent='Termin bearbeiten';
+  populateFallSelect(a.fallId);
+  document.getElementById('t-datum').value=a.datum;
+  document.getElementById('t-uhrzeit').value=a.uhrzeit;
+  document.getElementById('t-ende').value=minToTime(timeToMin(a.uhrzeit)+Number(a.dauer||0));
+  onTimeChange();
+  document.getElementById('t-format').value=a.format;
+  document.getElementById('t-art').value=a.art;
+  document.getElementById('t-status').value=a.status;
+  document.getElementById('t-notiz').value=a.notiz||'';
+  document.getElementById('t-edit-id').value=id;
+  document.getElementById('modal-termin').classList.remove('hidden');
+}
+
+function saveTermin(){
+  const fallId=document.getElementById('t-fall-id').value;
+  const datum=document.getElementById('t-datum').value;
+  if(!fallId){ alert('Bitte einen Fall wählen.'); return; }
+  if(!datum){ alert('Bitte Datum wählen.'); return; }
+  const start=document.getElementById('t-uhrzeit').value;
+  const ende =document.getElementById('t-ende').value;
+  const dauer=timeToMin(ende)-timeToMin(start);
+  if(!start||!ende){ alert('Bitte Beginn und Ende angeben.'); return; }
+  if(dauer<=0){ alert('Die Endzeit muss nach der Beginnzeit liegen.'); return; }
+  const editId=document.getElementById('t-edit-id').value;
+  const appts=db.appts();
+  const data={
+    fallId,datum,
+    uhrzeit:start,
+    dauer:  dauer,
+    format: document.getElementById('t-format').value,
+    art:    document.getElementById('t-art').value,
+    status: document.getElementById('t-status').value,
+    notiz:  document.getElementById('t-notiz').value.trim(),
+  };
+  if(editId){
+    const i=appts.findIndex(x=>x.id===editId); if(i>=0) appts[i]={...appts[i],...data};
+  } else {
+    appts.push({id:uid(),...data});
+  }
+  save.appts(appts);
+  closeModal('modal-termin');
+  renderMetrics();
+  if(document.getElementById('panel-detail').classList.contains('active')) renderDetail(fallId);
+  else if(currentTab==='heute') renderHeute();
+  else if(currentTab==='dashboard') renderDashboard();
+  else if(currentTab==='kalender') renderKal();
+  toast(editId?'Termin aktualisiert.':'Termin gespeichert.');
+}
+
+// Person bearbeiten (minimal – nur Name + Studiengang + E-Mail)
+function openPersonEdit(pid){
+  const p=db.persons().find(x=>x.id===pid); if(!p) return;
+  document.getElementById('pe-name').value=p.name||'';
+  document.getElementById('pe-stg').value=p.studiengang||'';
+  document.getElementById('pe-email').value=p.email||'';
+  document.getElementById('pe-id').value=pid;
+  document.getElementById('modal-person').classList.remove('hidden');
+}
+
+function openPersonModalFromFall(){
+  const pid = document.getElementById('f-person-id').value;
+  if(!pid||pid==='__new__') return;
+  openPersonEdit(pid);
+}
+
+function savePersonModal(){
+  const pid=document.getElementById('pe-id').value;
+  const name=document.getElementById('pe-name').value.trim();
+  if(!name){ alert('Bitte Name eingeben.'); return; }
+  const persons=db.persons();
+  const i=persons.findIndex(x=>x.id===pid);
+  if(i>=0){
+    persons[i].name=name;
+    persons[i].studiengang=document.getElementById('pe-stg').value.trim();
+    persons[i].email=document.getElementById('pe-email').value.trim();
+  }
+  save.persons(persons);
+  closeModal('modal-person');
+  // refresh person dropdown if fall modal is open
+  const selVal = document.getElementById('f-person-id')?.value;
+  if(selVal) populatePersonSelect(selVal);
+  // refresh detail if visible
+  if(document.getElementById('panel-detail').classList.contains('active')){
+    const c=db.cases().find(x=>x.personId===pid);
+    if(c) renderDetail(c.id);
+  }
+  toast('Person aktualisiert.');
+}
+
+// ═══════════════════════════════════════════════════
+// KALENDER
+// ═══════════════════════════════════════════════════
+let calY=new Date().getFullYear(), calM=new Date().getMonth();
+
+function renderKal(){
+  document.getElementById('cal-title').textContent=MONTHS[calM]+' '+calY;
+  document.getElementById('cal-hdr').innerHTML=WDAYS.map(d=>`<div class="cal-hdr">${d}</div>`).join('');
+  const appts=db.appts(), tmap={};
+  appts.forEach(a=>{(tmap[a.datum]=tmap[a.datum]||[]).push(a);});
+  let dow=new Date(calY,calM,1).getDay(); dow=dow===0?6:dow-1;
+  const dim=new Date(calY,calM+1,0).getDate();
+  const dip=new Date(calY,calM,0).getDate();
+  const t=today();
+  let cells='';
+  for(let i=0;i<dow;i++)
+    cells+=`<div class="cal-day other-month"><div class="cal-day-num">${dip-dow+1+i}</div></div>`;
+  for(let d=1;d<=dim;d++){
+    const key=calY+'-'+pad(calM+1)+'-'+pad(d);
+    const list=tmap[key]||[];
+    const isT=key===t;
+    const dots=list.slice(0,5).map(a=>{
+      const col=a.status==='erledigt'?'var(--green)':a.status==='abgesagt'?'var(--red)':'var(--blue)';
+      return`<span class="cal-dot" style="background:${col}"></span>`;
+    }).join('');
+    cells+=`<div class="cal-day${isT?' today':''}" data-key="${key}">
+      <div class="cal-day-num">${d}</div>
+      <div style="margin-top:3px">${dots}</div>
+    </div>`;
+  }
+  const rem=(7-(dow+dim)%7)%7;
+  for(let d=1;d<=rem;d++)
+    cells+=`<div class="cal-day other-month"><div class="cal-day-num">${d}</div></div>`;
+  document.getElementById('cal-body').innerHTML=cells;
+  document.querySelectorAll('#cal-body .cal-day:not(.other-month)').forEach(el=>{
+    el.addEventListener('click',()=>showDay(el.dataset.key));
+  });
+}
+
+function calMove(dir){
+  calM+=dir; if(calM>11){calM=0;calY++;} else if(calM<0){calM=11;calY--;} renderKal();
+}
+function calToday(){ const n=new Date(); calY=n.getFullYear(); calM=n.getMonth(); renderKal(); }
+
+function showDay(key){
+  const [y,m,d]=key.split('-');
+  const label=`${parseInt(d)}. ${MONTHS[parseInt(m)-1]} ${y}`;
+  const appts=db.appts().filter(a=>a.datum===key).sort((a,b)=>a.uhrzeit.localeCompare(b.uhrzeit));
+  const cases=db.cases();
+
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+    <div style="font-size:16px;font-weight:600">${label}</div>
+    <button class="btn btn-primary btn-sm" onclick="openTerminModalDate('${key}')">+ Termin</button>
+  </div>`;
+
+  html += appts.length
+    ? `<div class="tl-wrap">${appts.map(a=>{
+        const c=cases.find(x=>x.id===a.fallId);
+        const fmtLabel={online:'Online',praesent:'Präsenz',telefonisch:'Telefonisch'}[a.format]||a.format;
+        return`<div class="tl-item">
+          <div class="tl-time"><div class="tl-time-h">${a.uhrzeit}</div></div>
+          <div class="tl-bar ${a.status==='erledigt'?'green':a.status==='abgesagt'?'red':'blue'}"></div>
+          <div class="tl-card" onclick="${c?`showDetail('${c.id}','kalender')`:''}">
+            <div class="tl-card-name">${c?esc(nameForCase(c)):'?'}</div>
+            <div class="tl-card-meta">
+              <span>${esc(a.art)}</span>${badge(esc(fmtLabel),'f-'+esc(a.format))}<span>${fmtDur(a.dauer)}</span>${apptBadge(a.status)}
+            </div>
+            ${c?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(c.titel)}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')}</div>`
+    : `<div class="empty">Keine Termine an diesem Tag.</div>`;
+
+  document.getElementById('day-content').innerHTML=html;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-day').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.nav-btn[onclick="go('kalender')"]`).classList.add('active');
+}
+
+function openTerminModalDate(date){
+  openTerminModal();
+  document.getElementById('t-datum').value=date;
+}
+
+// ═══════════════════════════════════════════════════
+// STATISTIK
+// ═══════════════════════════════════════════════════
+function renderStats(){
+  const cases  = db.cases();
+  const appts  = db.appts();
+  const persons = db.persons();
+
+  const done    = appts.filter(a=>a.status==='erledigt');
+  const total   = done.length;
+  const totalMin= done.reduce((s,a)=>s+Number(a.dauer||0),0);
+  const totalH  = Math.floor(totalMin/60);
+  const totalM  = totalMin%60;
+
+  // Fälle gesamt / offen / abgeschlossen
+  const cAll  = cases.length;
+  const cOpen = cases.filter(c=>c.status!=='abgeschlossen').length;
+  const cDone = cases.filter(c=>c.status==='abgeschlossen').length;
+
+  // Qual/Quant Aufschlüsselung
+  const qqCount = {quantitativ:0, qualitativ:0, gemischt:0};
+  cases.forEach(c=>{if(qqCount[c.qq]!==undefined)qqCount[c.qq]++;});
+
+  // Durchschnittliche Sitzungen pro Fall
+  const fallAppts = cases.map(c=>done.filter(a=>a.fallId===c.id).length);
+  const avgSess   = cAll>0?(fallAppts.reduce((s,n)=>s+n,0)/cAll).toFixed(1):0;
+
+  // Wiederholungsrate: wie viele Personen kamen 1x, 2x, 3x, 4+x
+  const sessPerPerson = {};
+  cases.forEach(c=>{
+    const pid = c.personId;
+    const n   = done.filter(a=>a.fallId===c.id).length;
+    sessPerPerson[pid] = (sessPerPerson[pid]||0) + n;
+  });
+  const repBuckets = {1:0,2:0,3:0,'4+':0};
+  Object.values(sessPerPerson).forEach(n=>{
+    if(n===1) repBuckets[1]++;
+    else if(n===2) repBuckets[2]++;
+    else if(n===3) repBuckets[3]++;
+    else if(n>=4)  repBuckets['4+']++;
+  });
+
+  // Software
+  const swCount = {};
+  cases.forEach(c=>{ if(c.software){swCount[c.software]=(swCount[c.software]||0)+1;} });
+  const swData = Object.entries(swCount).sort((a,b)=>b[1]-a[1]);
+  const maxSw  = Math.max(...swData.map(x=>x[1]),1);
+
+  // Tags (häufigste) — Thema fließt nicht mehr in die Statistik ein
+  const topicCount = {};
+  cases.forEach(c=>{
+    (c.tags||[]).forEach(t=>{ topicCount[t]=(topicCount[t]||0)+1; });
+  });
+  const topicData = Object.entries(topicCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxTopic  = Math.max(...topicData.map(x=>x[1]),1);
+
+  // Sitzungen pro Monat (letzte 6 Monate)
+  const monthly=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(); d.setMonth(d.getMonth()-i);
+    const y=d.getFullYear(), m=d.getMonth();
+    const n=done.filter(a=>{
+      const[ay,am]=a.datum.split('-');
+      return parseInt(ay)===y&&parseInt(am)-1===m;
+    }).length;
+    monthly.push([MONTHSS[m],n]);
+  }
+  const maxMo=Math.max(...monthly.map(x=>x[1]),1);
+
+  // Sitzungsminuten nach Software
+  const swMin={};
+  done.forEach(a=>{
+    const c=cases.find(x=>x.id===a.fallId);
+    const sw=c?.software||'–';
+    swMin[sw]=(swMin[sw]||0)+Number(a.dauer||0);
+  });
+  const swMinData=Object.entries(swMin).sort((a,b)=>b[1]-a[1]);
+  const maxSwMin=Math.max(...swMinData.map(x=>x[1]),1);
+
+  function bars(data, maxVal, color){
+    if(!data.length) return`<div style="color:var(--t3);font-size:13px">Keine Daten.</div>`;
+    return data.map(([label,val])=>`
+      <div class="bar-row">
+        <div class="bar-lbl" title="${esc(label)}">${esc(label)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(val/maxVal*100)}%;background:${color}"></div></div>
+        <div class="bar-num">${val}</div>
+      </div>`).join('');
+  }
+
+  // Export-CSV
+  function csvExport(){
+    const rows=[['Kürzel','Studiengang','Projekttitel','Typ','Beratungsart','Software','Fragen','Status','Sitzungen erledigt','Gesamtminuten','Deadline']];
+    cases.forEach(c=>{
+      const p=personForCase(c);
+      const sess=done.filter(a=>a.fallId===c.id);
+      rows.push([
+        p?nameInitials(p.name):'',
+        p?.studiengang||'',c.titel||'',c.typ||'',c.qq||'',
+        c.software||'',c.fragen||'',c.status||'',
+        sess.length,sess.reduce((s,a)=>s+Number(a.dauer||0),0),c.deadline||''
+      ]);
+    });
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`methodenberatung-bericht-${today()}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast('CSV exportiert.');
+  }
+  window._csvExport=csvExport;
+
+  document.getElementById('stats-content').innerHTML=`
+    <!-- Kopfzeile mit Export -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px">
+      <div style="font-size:15px;font-weight:600;color:var(--t1)">Beratungsstatistik</div>
+      <button class="btn btn-sm" onclick="window._csvExport()">↓ CSV-Export</button>
+    </div>
+
+    <!-- Kennzahlen oben -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:1.25rem">
+      <div class="stat-card"><div class="stat-big">${cAll}</div><div class="stat-sub">Fälle gesamt</div><div style="font-size:11px;color:var(--t3);margin-top:3px">${cOpen} offen · ${cDone} abgeschlossen</div></div>
+      <div class="stat-card"><div class="stat-big">${total}</div><div class="stat-sub">Sitzungen gesamt</div><div style="font-size:11px;color:var(--t3);margin-top:3px">Ø ${avgSess} pro Fall</div></div>
+      <div class="stat-card"><div class="stat-big">${totalH}h ${totalM>0?totalM+'min':''}</div><div class="stat-sub">Beratungszeit gesamt</div></div>
+      <div class="stat-card">
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            ${qqBadge('quantitativ')}<span style="font-size:16px;font-weight:700">${qqCount.quantitativ}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            ${qqBadge('qualitativ')}<span style="font-size:16px;font-weight:700">${qqCount.qualitativ}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            ${qqBadge('gemischt')}<span style="font-size:16px;font-weight:700">${qqCount.gemischt}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts 2-col -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-title">Sitzungen pro Monat</div>
+        ${bars(monthly,maxMo,'var(--blue)')}
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Wiederholungen (Sitzungen pro Person)</div>
+        ${Object.entries(repBuckets).map(([k,v])=>`
+          <div class="rep-row">
+            <span style="color:var(--t2)">${k==='4+'?'4 oder mehr':k} Sitzung${k==='1'?'':'en'}</span>
+            <span style="font-weight:600;color:var(--t1)">${v} Person${v!==1?'en':''}</span>
+          </div>`).join('')}
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--b1);font-size:12px;color:var(--t2)">
+          Personen mit Folgeterminen: <strong>${Object.entries(repBuckets).filter(([k])=>k!=='1').reduce((s,[,v])=>s+v,0)}</strong>
+          von ${Object.values(repBuckets).reduce((s,v)=>s+v,0)} gesamt
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-title">Häufige Stichwörter (Tags)</div>
+        ${topicData.length?bars(topicData,maxTopic,'var(--purple)'):`<div style="color:var(--t3);font-size:13px">Noch keine Stichwörter erfasst.</div>`}
+        ${topicData.length?`<div style="margin-top:8px;font-size:11px;color:var(--t3)">Basis für Workshop-Planung</div>`:''}
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Software-Nutzung (Fälle)</div>
+        ${bars(swData,maxSw,'var(--teal)')}
+        <div class="stat-card-title" style="margin-top:14px">Beratungsminuten nach Software</div>
+        ${bars(swMinData.map(([k,v])=>[k,Math.round(v/60)+'h'+(v%60>0?' '+(v%60)+'min':'')])
+               .map(([k,v],i)=>[k,swMinData[i][1]]),maxSwMin,'var(--green)')}
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════
+function exportData(){
+  const payload={version:4,exportedAt:new Date().toISOString(),
+    persons:db.persons(),cases:db.cases(),appts:db.appts()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`methodenberatung-${today()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Backup gespeichert.');
+}
+
+function importData(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!d||typeof d!=='object'||!Array.isArray(d.cases)){ alert('Ungültige Datei.'); input.value=''; return; }
+      const persons=Array.isArray(d.persons)?d.persons:[];
+      const appts=Array.isArray(d.appts)?d.appts:[];
+      const s=`${persons.length} Personen, ${d.cases.length} Fälle, ${appts.length} Termine`;
+      if(!confirm(`Backup laden?\n\n${s}\n\n⚠ Bestehende Daten werden überschrieben.`)){input.value='';return;}
+      save.persons(persons); save.cases(d.cases); save.appts(appts);
+      input.value='';
+      go('dashboard');
+      toast('Backup geladen.');
+    }catch{ alert('Fehler beim Lesen.'); input.value=''; }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
+document.querySelectorAll('.overlay').forEach(o=>
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.add('hidden'); }));
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hidden'));
+});
+
+// ═══════════════════════════════════════════════════
+// SCHNELLEINTRAG
+// ═══════════════════════════════════════════════════
+function openSchnelleintrag(){
+  // Person-Select befüllen
+  const persons = db.persons();
+  const sel = document.getElementById('sn-person-id');
+  sel.innerHTML = '<option value="">– wählen –</option><option value="__new__">+ Neue Person</option>'
+    + persons.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.studiengang?' ('+esc(p.studiengang)+')':''}</option>`).join('');
+  // Felder zurücksetzen
+  ['sn-name','sn-stg','sn-email','sn-titel','sn-tags'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sn-typ').value='Masterarbeit';
+  document.getElementById('sn-software').value='';
+  document.getElementById('sn-format').value='online';
+  document.getElementById('sn-art').value='Erstberatung';
+  document.getElementById('sn-status').value='erledigt';
+  document.getElementById('sn-datum').value=today();
+  document.getElementById('sn-uhrzeit').value='10:00';
+  document.getElementById('sn-ende').value='11:00';
+  document.getElementById('sn-dauer-hint').textContent='Dauer: 60 min';
+  document.querySelectorAll('input[name="sn-qq"]').forEach(r=>r.checked=false);
+  document.getElementById('sn-new-person-block').classList.add('hidden');
+  document.getElementById('modal-schnell').classList.remove('hidden');
+}
+
+function onSnPersonChange(val){
+  document.getElementById('sn-new-person-block').classList.toggle('hidden', val!=='__new__');
+}
+
+function onSnTimeChange(){
+  const start = document.getElementById('sn-uhrzeit').value;
+  const ende  = document.getElementById('sn-ende').value;
+  const hint  = document.getElementById('sn-dauer-hint');
+  if(!start||!ende){ hint.textContent='Dauer: –'; return; }
+  const d = timeToMin(ende)-timeToMin(start);
+  hint.textContent = d>0 ? 'Dauer: '+fmtDur(d) : 'Ende muss nach Beginn liegen';
+  hint.style.color = d>0 ? 'var(--t3)' : 'var(--red)';
+}
+
+function saveSchnelleintrag(){
+  const titel = document.getElementById('sn-titel').value.trim();
+  if(!titel){ alert('Bitte Projekttitel eingeben.'); return; }
+
+  // Person
+  const persons = db.persons();
+  const personVal = document.getElementById('sn-person-id').value;
+  let personId = personVal;
+  if(personVal==='__new__'){
+    const name = document.getElementById('sn-name').value.trim();
+    if(!name){ alert('Bitte Name eingeben.'); return; }
+    const newP = { id:uid(), name,
+      studiengang: document.getElementById('sn-stg').value.trim(),
+      email: document.getElementById('sn-email').value.trim() };
+    persons.push(newP); save.persons(persons);
+    personId = newP.id;
+  } else if(!personVal){
+    alert('Bitte eine Person wählen oder neu anlegen.'); return;
+  }
+
+  // Fall
+  const cases = db.cases();
+  const fallId = uid();
+  const start = document.getElementById('sn-uhrzeit').value;
+  const ende  = document.getElementById('sn-ende').value;
+  const dauer = timeToMin(ende)-timeToMin(start);
+  if(dauer<=0){ alert('Ende muss nach Beginn liegen.'); return; }
+
+  cases.push({
+    id: fallId, erstelltAm: today(), personId, titel,
+    qq:          document.querySelector('input[name="sn-qq"]:checked')?.value||'',
+    typ:         document.getElementById('sn-typ').value,
+    software:    document.getElementById('sn-software').value,
+    fragen:      '',
+    tags:        parseTags(document.getElementById('sn-tags').value),
+    datenstatus: 'Keine Daten',
+    deadline:    '',
+    status:      'laufend',
+    prioritaet:  'normal',
+    naechsterSchritt:'', notiz:'', abschlussnotiz:''
+  });
+  save.cases(cases);
+
+  // Termin
+  const appts = db.appts();
+  appts.push({
+    id: uid(), fallId,
+    datum:   document.getElementById('sn-datum').value,
+    uhrzeit: start,
+    dauer,
+    format:  document.getElementById('sn-format').value,
+    art:     document.getElementById('sn-art').value,
+    status:  document.getElementById('sn-status').value,
+    notiz:   ''
+  });
+  save.appts(appts);
+
+  closeModal('modal-schnell');
+  renderMetrics();
+  if(currentTab==='dashboard') renderDashboard();
+  else if(currentTab==='faelle') renderFaelle();
+  else renderDashboard();
+  toast('Person, Fall & Termin gespeichert.');
+}
+
+// ═══════════════════════════════════════════════════
+// E-MAIL-PARSER (Fall-Modal)
+// ═══════════════════════════════════════════════════
+function toggleEmailPaste(){
+  const block = document.getElementById('email-paste-block');
+  const arrow = document.getElementById('email-paste-arrow');
+  const open  = block.style.display === 'none';
+  block.style.display = open ? 'block' : 'none';
+  arrow.textContent   = open ? '▲' : '▼';
+  // Wenn geschlossen: Spickzettel auch wegräumen
+  if(!open) hideEmailSpickzettel();
+}
+
+function showEmailSpickzettel(){
+  const raw = document.getElementById('email-paste-text').value.trim();
+  if(!raw){ alert('Bitte zuerst den E-Mail-Text einfügen.'); return; }
+
+  // Text bereinigen: >-Zitate, *Markdown*, führende Leerzeichen
+  const cleaned = raw
+    .split('\n')
+    .map(l => l.replace(/^>\s?/, '').replace(/\*{1,2}([^*]+)\*{1,2}/g,'$1').trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  // Tag-Kandidaten: vordefinierte Keywords + alle bereits genutzten Tags aus DB
+  const FIXED_KW = [
+    'Regression','Multiple Regression','Logistische Regression','Beta-Regression',
+    'Ordinale Regression','Poisson-Regression','ANOVA','MANOVA','t-Test','Chi-Quadrat',
+    'Korrelation','SEM','Strukturgleichungsmodell','Pfadmodell','Mediation',
+    'Mediationsanalyse','Moderation','Moderationsanalyse','Interaktion','Simple Slopes',
+    'Faktorenanalyse','EFA','CFA','Reliabilität','Cronbach','Poweranalyse','Effektgröße',
+    'fehlende Werte','FIML','Multiple Imputation','Längsschnitt','Querschnitt',
+    'Latent Growth','Mixed Model','Multilevel','Hierarchisch','Bootstrap',
+    'Clusteranalyse','Diskriminanzanalyse','Kovarianzanalyse','Varianzaufklärung',
+    'Inhaltsanalyse','Grounded Theory','Thematische Analyse','Interview','Kodierung',
+    'MAXQDA','Deskriptivstatistik','Normalverteilung','Ausreißer','Transformation',
+    'Dummy-Variable','Interaktionsterm','Kovariable','Stichprobengröße','Fragebogen',
+    'Skalenkonstruktion','Itemanalyse','Messinvarianz','Konfirmatorisch'
+  ];
+
+  // Bereits genutzte Tags aus der DB
+  const dbTags = [...new Set(db.cases().flatMap(c=>c.tags||[]))];
+  const allCandidates = [...new Set([...FIXED_KW, ...dbTags])];
+
+  // Gegen den bereinigten Text matchen
+  const rawLower = cleaned.toLowerCase();
+  const matched = allCandidates.filter(kw => rawLower.includes(kw.toLowerCase()));
+
+  // Aktuell bereits gesetzte Tags
+  const currentTags = () => parseTags(document.getElementById('f-tags').value);
+
+  // Spickzettel-Panel erzeugen oder aktualisieren
+  let panel = document.getElementById('spick-panel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = 'spick-panel';
+    const modalInner = document.getElementById('modal-fall-inner');
+    modalInner.style.maxWidth = '860px';
+    modalInner.style.display  = 'grid';
+    modalInner.style.gridTemplateColumns = '1fr 1fr';
+    modalInner.style.gap = '16px';
+    modalInner.style.alignItems = 'start';
+
+    const formWrap = document.createElement('div');
+    formWrap.id = 'fall-form-wrap';
+    const children = [...modalInner.children];
+    const h2 = modalInner.querySelector('h2');
+    children.forEach(child => {
+      if(child !== h2) formWrap.appendChild(child);
+    });
+
+    panel.style.cssText = 'overflow-y:auto;max-height:80vh;padding-right:12px;border-right:1px solid var(--b1)';
+    modalInner.appendChild(panel);
+    modalInner.appendChild(formWrap);
+    h2.style.gridColumn = '1 / -1';
+    modalInner.insertBefore(h2, modalInner.firstChild);
+  }
+
+  // Tag-Chip-HTML — aktive Tags hervorgehoben
+  function renderChips(){
+    const active = currentTags();
+    if(!matched.length) return `<div style="font-size:12px;color:var(--t3)">Keine passenden Stichwörter gefunden.</div>`;
+    return matched.map(kw=>{
+      const isActive = active.some(t=>t.toLowerCase()===kw.toLowerCase());
+      return `<span class="tag-chip" data-kw="${esc(kw)}" style="
+        display:inline-block;padding:3px 9px;border-radius:3px;font-size:11px;
+        cursor:pointer;margin:2px;border:1px solid ${isActive?'var(--blue)':'var(--b2)'};
+        background:${isActive?'var(--blue-bg)':'var(--s1)'};
+        color:${isActive?'var(--blue)':'var(--t2)'};
+        font-weight:${isActive?'600':'400'};
+        transition:all .12s">${esc(kw)}${isActive?' ✓':''}</span>`;
+    }).join('');
+  }
+
+  panel.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">E-Mail</div>
+    <div style="font-size:12px;color:var(--t2);line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-bottom:14px">${esc(cleaned)}</div>
+    ${matched.length?`
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Erkannte Stichwörter</div>
+    <div id="tag-chips">${renderChips()}</div>
+    <div style="font-size:11px;color:var(--t3);margin-top:6px">Klick = Tag hinzufügen / entfernen</div>`:''}`;
+
+  // Event-Delegation: ein Listener auf dem Panel, kein inline-onclick
+  panel.addEventListener('click', e=>{
+    const chip = e.target.closest('.tag-chip');
+    if(!chip) return;
+    toggleTagChip(chip.dataset.kw);
+  });
+}
+
+function toggleTagChip(kw){
+  const inp = document.getElementById('f-tags');
+  let tags = parseTags(inp.value);
+  const idx = tags.findIndex(t=>t.toLowerCase()===kw.toLowerCase());
+  if(idx>=0) tags.splice(idx,1);
+  else tags.push(kw);
+  inp.value = tags.join(', ');
+  // Chips neu rendern
+  const el = document.getElementById('tag-chips');
+  if(el){
+    const active = parseTags(inp.value);
+    el.querySelectorAll('.tag-chip').forEach(chip=>{
+      const isActive = active.some(t=>t.toLowerCase()===chip.dataset.kw.toLowerCase());
+      chip.style.border    = `1px solid ${isActive?'var(--blue)':'var(--b2)'}`;
+      chip.style.background= isActive?'var(--blue-bg)':'var(--s1)';
+      chip.style.color     = isActive?'var(--blue)':'var(--t2)';
+      chip.style.fontWeight= isActive?'600':'400';
+      chip.textContent     = chip.dataset.kw + (isActive?' ✓':'');
+    });
+  }
+}
+
+function hideEmailSpickzettel(){
+  const panel = document.getElementById('spick-panel');
+  if(!panel) return;
+  const modalInner = document.getElementById('modal-fall-inner');
+  const formWrap   = document.getElementById('fall-form-wrap');
+
+  // Formular-Kinder zurück in modalInner
+  if(formWrap){
+    [...formWrap.children].forEach(child => modalInner.appendChild(child));
+    formWrap.remove();
+  }
+  panel.remove();
+
+  // Modal zurück auf normale Breite
+  modalInner.style.maxWidth      = '480px';
+  modalInner.style.display       = '';
+  modalInner.style.gridTemplateColumns = '';
+  modalInner.style.gap           = '';
+  const h2 = modalInner.querySelector('h2');
+  if(h2) h2.style.gridColumn = '';
+}
+
+// ═══════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════
+// Erst Daten aus IndexedDB laden (inkl. einmaliger localStorage-Migration), dann rendern.
+loadDB().then(()=>{ seedIfEmpty(); renderMetrics(); renderDashboard(); });
+</script>
+</body>
+</html>
